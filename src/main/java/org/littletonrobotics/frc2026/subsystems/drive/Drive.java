@@ -89,6 +89,7 @@ public class Drive extends FullSubsystem {
                 Timer.getTimestamp(),
                 getModulePositions(),
                 Optional.ofNullable(gyroInputs.connected ? gyroInputs.yawPosition : null)));
+    RobotState.getInstance().setRobotVelocity(getChassisSpeeds());
 
     // Update gyro alert
     gyroDisconnectedAlert.set(Robot.showHardwareAlerts() && !gyroInputs.connected);

@@ -12,12 +12,14 @@ import edu.wpi.first.math.Nat;
 import edu.wpi.first.math.VecBuilder;
 import edu.wpi.first.math.geometry.*;
 import edu.wpi.first.math.interpolation.TimeInterpolatableBuffer;
+import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
 import java.util.*;
 import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.frc2026.subsystems.drive.DriveConstants;
 import org.littletonrobotics.frc2026.util.geometry.GeomUtil;
@@ -50,6 +52,8 @@ public class RobotState {
       };
   private Rotation2d gyroOffset = Rotation2d.kZero;
 
+  @Getter @Setter private ChassisSpeeds robotVelocity = new ChassisSpeeds();
+
   // MARK: - Initialization
 
   private static RobotState instance;
@@ -81,6 +85,12 @@ public class RobotState {
   /** Get the rotation of the estimated pose. */
   public Rotation2d getRotation() {
     return estimatedPose.getRotation();
+  }
+
+  /** Get the field relative velocity of the robot. */
+  @AutoLogOutput
+  public ChassisSpeeds getFieldVelocity() {
+    return ChassisSpeeds.fromRobotRelativeSpeeds(robotVelocity, getRotation());
   }
 
   /** Adds a new odometry sample from the drive subsystem. */
