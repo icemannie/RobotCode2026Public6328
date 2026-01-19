@@ -16,7 +16,27 @@
       "degrees": 90
     }
   ],
-  "cameras": [],
+  "cameras": [
+    {
+      "name": "Northstar 0",
+      "rotations": [
+        {
+          "axis": "y",
+          "degrees": -22.5
+        }
+      ],
+      "position": [
+        -0.3282696,
+        0.0,
+        0.7170674
+      ],
+      "resolution": [
+        1600,
+        1200
+      ],
+      "fov": 66.62
+    }
+  ],
   "components": [
     {
       "zeroedRotations": [

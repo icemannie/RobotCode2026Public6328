@@ -149,7 +149,7 @@ public class RobotContainer {
     // Set up auto routines
     autoChooser = new LoggedDashboardChooser<>("Auto Choices");
     autoChooser.addDefaultOption("Do Nothing", Commands.none());
-    autoChooser.addDefaultOption(
+    autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
 
     // Configure the button bindings
@@ -159,6 +159,11 @@ public class RobotContainer {
     hood.setDefaultCommand(hood.runTrackTargetCommand());
     turret.setDefaultCommand(turret.runTrackTargetCommand());
     flywheel.setDefaultCommand(flywheel.runTrackTargetCommand());
+    intake.setDefaultCommand(
+        Commands.startEnd(
+            () -> intake.setGoal(Intake.Goal.INTAKE),
+            () -> intake.setGoal(Intake.Goal.STOP),
+            intake));
   }
 
   /** Create the bindings between buttons and commands. */
@@ -171,13 +176,14 @@ public class RobotContainer {
 
     // ***** PRIMARY CONTROLLER *****
     primary.x().onTrue(hood.zeroCommand().alongWith(turret.zeroCommand()));
-    primary
-        .leftTrigger()
-        .whileTrue(
-            Commands.startEnd(
-                () -> intake.setGoal(Intake.Goal.INTAKE),
-                () -> intake.setGoal(Intake.Goal.STOP),
-                intake));
+    // primary
+    //     .leftTrigger()
+    //     .negate()
+    //     .whileTrue(
+    //         Commands.startEnd(
+    //             () -> intake.setGoal(Intake.Goal.INTAKE),
+    //             () -> intake.setGoal(Intake.Goal.STOP),
+    //             intake));
     primary
         .rightTrigger()
         .whileTrue(
@@ -205,6 +211,11 @@ public class RobotContainer {
                     turret.runTrackTargetActiveShootingCommand()));
     primary
         .rightBumper()
+        .negate()
+        .whileTrue(turret.runTrackTargetActiveShootingCommand())
+        .and(hood::atGoal)
+        .and(flywheel::atGoal)
+        .and(turret::atGoal)
         .whileTrue(
             Commands.parallel(
                 Commands.startEnd(
@@ -214,8 +225,13 @@ public class RobotContainer {
                 Commands.startEnd(
                     () -> kicker.setGoal(Kicker.Goal.SHOOT),
                     () -> kicker.setGoal(Kicker.Goal.STOP),
-                    kicker),
-                turret.runTrackTargetActiveShootingCommand()));
+                    kicker)))
+        .onFalse(
+            Commands.startEnd(
+                    () -> kicker.setGoal(Kicker.Goal.OUTTAKE),
+                    () -> kicker.setGoal(Kicker.Goal.STOP),
+                    kicker)
+                .withTimeout(0.5));
 
     // ***** SECONDARY CONTROLLER *****
 

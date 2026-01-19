@@ -12,12 +12,16 @@ import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.DoubleSupplier;
+import lombok.Getter;
+import lombok.experimental.Accessors;
 import org.littletonrobotics.frc2026.Constants;
 import org.littletonrobotics.frc2026.Robot;
 import org.littletonrobotics.frc2026.subsystems.shooter.ShotCalculator;
 import org.littletonrobotics.frc2026.subsystems.shooter.flywheel.FlywheelIO.FlywheelIOOutputs;
+import org.littletonrobotics.frc2026.util.EqualsUtil;
 import org.littletonrobotics.frc2026.util.FullSubsystem;
 import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
+import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Flywheel extends FullSubsystem {
@@ -37,7 +41,13 @@ public class Flywheel extends FullSubsystem {
   public static final LoggedTunableNumber kD = new LoggedTunableNumber("Flywheel/kD");
   private static final LoggedTunableNumber rateLimiter =
       new LoggedTunableNumber("Flywheel/SlewRateLimiter");
+
   SlewRateLimiter slewRateLimiter = new SlewRateLimiter(rateLimiter.get());
+
+  @Getter
+  @Accessors(fluent = true)
+  @AutoLogOutput
+  private boolean atGoal = false;
 
   static {
     switch (Constants.robot) {
@@ -101,8 +111,9 @@ public class Flywheel extends FullSubsystem {
     outputs.coast = false;
     outputs.velocityRadsPerSec = slewRateLimiter.calculate(velocityRadsPerSec);
     outputs.feedForward =
-        kS.get() * Math.signum(velocityRadsPerSec)
-            + kV.get() * Math.min(velocityRadsPerSec, kVMaxVelocity.get());
+        kS.get() * Math.signum(outputs.velocityRadsPerSec)
+            + kV.get() * Math.min(outputs.velocityRadsPerSec, kVMaxVelocity.get());
+    atGoal = EqualsUtil.epsilonEquals(velocityRadsPerSec, outputs.velocityRadsPerSec);
 
     // Log flywheel setpoint
     Logger.recordOutput("Flywheel/Setpoint", outputs.velocityRadsPerSec);
@@ -112,6 +123,7 @@ public class Flywheel extends FullSubsystem {
   private void stop() {
     outputs.velocityRadsPerSec = 0.0;
     outputs.coast = true;
+    atGoal = false;
   }
 
   /** Returns the current velocity in RPM. */

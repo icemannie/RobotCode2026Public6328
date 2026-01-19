@@ -34,10 +34,13 @@ public class Hood extends FullSubsystem {
 
   private static final LoggedTunableNumber kP = new LoggedTunableNumber("Hood/kP");
   private static final LoggedTunableNumber kD = new LoggedTunableNumber("Hood/kD");
+  private static final LoggedTunableNumber toleranceDeg =
+      new LoggedTunableNumber("Hood/ToleranceDeg");
 
   static {
     kP.initDefault(30000);
     kD.initDefault(300);
+    toleranceDeg.initDefault(1.0);
   }
 
   private final HoodIO io;
@@ -112,6 +115,14 @@ public class Hood extends FullSubsystem {
   @AutoLogOutput(key = "Hood/MeasuredAngleRads")
   public double getMeasuredAngleRad() {
     return inputs.positionRads + hoodOffset;
+  }
+
+  @AutoLogOutput
+  public boolean atGoal() {
+    return DriverStation.isEnabled()
+        && hoodZeroed
+        && Math.abs(getMeasuredAngleRad() - goalAngle)
+            <= Units.degreesToRadians(toleranceDeg.get());
   }
 
   private void zero() {

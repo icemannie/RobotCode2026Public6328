@@ -23,6 +23,7 @@ import java.util.function.DoubleSupplier;
 import java.util.function.Supplier;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.littletonrobotics.frc2026.AlphaMechanism3d;
 import org.littletonrobotics.frc2026.Constants;
 import org.littletonrobotics.frc2026.Robot;
@@ -30,6 +31,7 @@ import org.littletonrobotics.frc2026.RobotState;
 import org.littletonrobotics.frc2026.subsystems.shooter.ShotCalculator;
 import org.littletonrobotics.frc2026.subsystems.shooter.turret.TurretIO.TurretIOOutputMode;
 import org.littletonrobotics.frc2026.subsystems.shooter.turret.TurretIO.TurretIOOutputs;
+import org.littletonrobotics.frc2026.util.EqualsUtil;
 import org.littletonrobotics.frc2026.util.FullSubsystem;
 import org.littletonrobotics.frc2026.util.LoggedTracer;
 import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
@@ -103,6 +105,11 @@ public class Turret extends FullSubsystem {
   private double turretOffset;
   private boolean turretZeroed = false;
 
+  @Getter
+  @Accessors(fluent = true)
+  @AutoLogOutput
+  private boolean atGoal = false;
+
   public Turret(TurretIO turretIO) {
     this.turretIO = turretIO;
   }
@@ -117,10 +124,10 @@ public class Turret extends FullSubsystem {
     // Stop when disabled
     if (DriverStation.isDisabled() || !turretZeroed) {
       outputs.mode = TurretIOOutputMode.BRAKE;
-
       if (coastOverride.getAsBoolean()) {
         outputs.mode = TurretIOOutputMode.COAST;
       }
+      atGoal = false;
     }
 
     // Update profile constraints
@@ -132,7 +139,6 @@ public class Turret extends FullSubsystem {
 
     // Update lastGoalAngle & reset setpoint
     if (DriverStation.isDisabled()) {
-
       setpoint = new State(inputs.positionRads, 0.0);
       lastGoalAngle = getPosition();
     }
@@ -196,6 +202,9 @@ public class Turret extends FullSubsystem {
               MathUtil.clamp(bestAngle, minLegalAngle, maxLegalAngle), robotRelativeGoalVelocity);
 
       setpoint = profile.calculate(Constants.loopPeriodSecs, setpoint, goalState);
+      atGoal =
+          EqualsUtil.epsilonEquals(bestAngle, setpoint.position)
+              && EqualsUtil.epsilonEquals(robotRelativeGoalVelocity, setpoint.velocity);
       Logger.recordOutput("Turret/GoalPositionRad", bestAngle);
       Logger.recordOutput("Turret/GoalVelocityRadPerSec", robotRelativeGoalVelocity);
       Logger.recordOutput("Turret/SetpointPositionRad", setpoint.position);

@@ -7,17 +7,23 @@
 
 package org.littletonrobotics.frc2026.subsystems.vision;
 
+import static org.littletonrobotics.frc2026.subsystems.shooter.ShooterConstants.turretToCamera;
+
 import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.util.Units;
+import edu.wpi.first.math.geometry.Translation3d;
 import java.util.Optional;
 import java.util.function.Function;
 import lombok.Builder;
+import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.frc2026.Constants;
 import org.littletonrobotics.frc2026.RobotState;
+import org.littletonrobotics.frc2026.subsystems.shooter.ShooterConstants;
+import org.littletonrobotics.frc2026.util.geometry.GeomUtil;
 
+@ExtensionMethod({GeomUtil.class})
 public class VisionConstants {
   public static final double ambiguityThreshold = 0.4;
   public static final double targetLogTimeSecs = 0.1;
@@ -43,18 +49,12 @@ public class VisionConstants {
                           return Optional.empty();
                         } else {
                           return Optional.of(
-                              new Pose3d(
-                                      Units.inchesToMeters(-7.75),
-                                      0.0,
-                                      Units.inchesToMeters(28.231),
-                                      new Rotation3d(turretAngle.get()))
+                              ShooterConstants.robotToTurret
+                                  .toPose3d()
                                   .transformBy(
                                       new Transform3d(
-                                          Units.inchesToMeters(-5.174),
-                                          0.0,
-                                          0.0,
-                                          new Rotation3d(
-                                              0.0, Units.degreesToRadians(-22.5), 0.0))));
+                                          Translation3d.kZero, new Rotation3d(turretAngle.get())))
+                                  .transformBy(turretToCamera));
                         }
                       })
                   .id("40552081")
