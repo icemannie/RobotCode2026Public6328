@@ -35,13 +35,15 @@ public class Flywheel extends FullSubsystem {
   private static final LoggedTunableNumber torqueCurrentControlTolerance =
       new LoggedTunableNumber("Flywheel/TorqueCurrentControlTolerance", 20.0);
   private static final LoggedTunableNumber torqueCurrentControlDebounce =
-      new LoggedTunableNumber("Flywheel/TorqueCurrentControlDebounce", 0.035);
+      new LoggedTunableNumber("Flywheel/TorqueCurrentControlDebounce", 0.025);
   private static final LoggedTunableNumber atGoalDebounce =
       new LoggedTunableNumber("Flywheel/AtGoalDebounce", 0.2);
 
   private Debouncer torqueCurrentDebouncer =
       new Debouncer(torqueCurrentControlDebounce.get(), DebounceType.kFalling);
   private Debouncer atGoalDebouncer = new Debouncer(atGoalDebounce.get(), DebounceType.kFalling);
+  private boolean lastTorqueCurrentControl = false;
+  @AutoLogOutput private long shotCount = 0;
 
   @Getter
   @Accessors(fluent = true)
@@ -83,6 +85,11 @@ public class Flywheel extends FullSubsystem {
             <= torqueCurrentControlTolerance.get();
     boolean torqueCurrentControl = torqueCurrentDebouncer.calculate(inTolerance);
     atGoal = atGoalDebouncer.calculate(inTolerance);
+
+    if (!torqueCurrentControl && lastTorqueCurrentControl) {
+      shotCount++;
+    }
+    lastTorqueCurrentControl = torqueCurrentControl;
 
     outputs.mode =
         torqueCurrentControl

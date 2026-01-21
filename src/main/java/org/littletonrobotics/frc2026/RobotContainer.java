@@ -121,7 +121,8 @@ public class RobotContainer {
       intake = new Intake(new RollerSystemIO() {});
     }
     if (hopper == null) {
-      hopper = new Hopper(new RollerSystemIO() {});
+      hopper =
+          new Hopper(new RollerSystemIO() {}, new RollerSystemIO() {}, new RollerSystemIO() {});
     }
     if (hood == null) {
       hood = new Hood(new HoodIO() {});
