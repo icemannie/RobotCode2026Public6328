@@ -24,7 +24,7 @@ public class TriggerUtil {
    * @param command The command to start.
    * @return This trigger, so calls can be chained.
    */
-  public static void whileTrueContinuous(Trigger trigger, final Command command) {
+  public static Trigger whileTrueContinuous(Trigger trigger, final Command command) {
     CommandScheduler.getInstance()
         .getDefaultButtonLoop()
         .bind(
@@ -44,6 +44,7 @@ public class TriggerUtil {
                 m_pressedLast = pressed;
               }
             });
+    return trigger;
   }
 
   /**

@@ -19,6 +19,10 @@ public interface FlywheelIO {
     public double supplyCurrentAmps;
     public double torqueCurrentAmps;
     public double tempCelsius;
+
+    public boolean followerConnected;
+    public double followerSupplyCurrentAmps;
+    public double followerTempCelsius;
   }
 
   public static enum FlywheelIOOutputMode {

@@ -15,6 +15,7 @@ import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import java.util.function.DoubleSupplier;
@@ -190,18 +191,19 @@ public class RobotContainer {
         .rightTrigger()
         .whileTrue(
             Commands.parallel(
-                Commands.startEnd(
-                    () -> intake.setGoal(Intake.Goal.OUTTAKE),
-                    () -> intake.setGoal(Intake.Goal.STOP),
-                    intake),
-                Commands.startEnd(
-                    () -> hopper.setGoal(Hopper.Goal.OUTTAKE),
-                    () -> hopper.setGoal(Hopper.Goal.STOP),
-                    hopper),
-                Commands.startEnd(
-                    () -> kicker.setGoal(Kicker.Goal.OUTTAKE),
-                    () -> kicker.setGoal(Kicker.Goal.STOP),
-                    kicker)));
+                    Commands.startEnd(
+                        () -> intake.setGoal(Intake.Goal.OUTTAKE),
+                        () -> intake.setGoal(Intake.Goal.STOP),
+                        intake),
+                    Commands.startEnd(
+                        () -> hopper.setGoal(Hopper.Goal.OUTTAKE),
+                        () -> hopper.setGoal(Hopper.Goal.STOP),
+                        hopper),
+                    Commands.startEnd(
+                        () -> kicker.setGoal(Kicker.Goal.OUTTAKE),
+                        () -> kicker.setGoal(Kicker.Goal.STOP),
+                        kicker))
+                .withInterruptBehavior(InterruptionBehavior.kCancelIncoming));
     primary
         .leftClaw()
         .whileTrue(
@@ -219,7 +221,7 @@ public class RobotContainer {
         .and(hood::atGoal)
         .and(flywheel::atGoal)
         .and(turret::atGoal)
-        .whileTrue(
+        .whileTrueContinuous(
             Commands.parallel(
                 Commands.startEnd(
                     () -> hopper.setGoal(Hopper.Goal.SHOOT),

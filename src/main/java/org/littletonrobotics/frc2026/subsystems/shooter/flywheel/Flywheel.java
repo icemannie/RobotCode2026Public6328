@@ -30,7 +30,10 @@ public class Flywheel extends FullSubsystem {
 
   private final Debouncer motorConnectedDebouncer =
       new Debouncer(0.5, Debouncer.DebounceType.kFalling);
+  private final Debouncer motorFollowerConnectedDebouncer =
+      new Debouncer(0.5, Debouncer.DebounceType.kFalling);
   private final Alert disconnected;
+  private final Alert followerDisconnected;
 
   private static final LoggedTunableNumber torqueCurrentControlTolerance =
       new LoggedTunableNumber("Flywheel/TorqueCurrentControlTolerance", 20.0);
@@ -54,6 +57,8 @@ public class Flywheel extends FullSubsystem {
     this.io = io;
 
     disconnected = new Alert("Flywheel motor disconnected!", Alert.AlertType.kWarning);
+    followerDisconnected =
+        new Alert("Flywheel follower motor disconnected!", Alert.AlertType.kWarning);
   }
 
   public void periodic() {
@@ -70,6 +75,9 @@ public class Flywheel extends FullSubsystem {
 
     disconnected.set(
         Robot.showHardwareAlerts() && !motorConnectedDebouncer.calculate(inputs.connected));
+    followerDisconnected.set(
+        Robot.showHardwareAlerts()
+            && !motorFollowerConnectedDebouncer.calculate(inputs.followerConnected));
   }
 
   @Override
