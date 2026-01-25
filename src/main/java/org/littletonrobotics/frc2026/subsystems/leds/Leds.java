@@ -31,6 +31,7 @@ public class Leds extends VirtualSubsystem {
 
   // Robot state tracking
   public boolean lowBatteryAlert = false;
+  public boolean superstructureCoast = false;
   private boolean estopped = false;
   private Optional<Alliance> alliance = Optional.empty();
   private Color disabledColor = Color.kGold;
@@ -85,7 +86,10 @@ public class Leds extends VirtualSubsystem {
     if (estopped) {
       solid(fullSection, Color.kRed);
     } else if (DriverStation.isDisabled()) {
-      if (lowBatteryAlert) {
+      if (superstructureCoast) {
+        // Superstructure coast
+        solid(fullSection, Color.kWhite);
+      } else if (lowBatteryAlert) {
         // Low battery
         strobe(fullSection, Color.kOrangeRed, Color.kBlack, strobeDuration);
       } else if (prideLeds) {

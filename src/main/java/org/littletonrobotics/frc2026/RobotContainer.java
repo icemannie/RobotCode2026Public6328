@@ -18,6 +18,8 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.util.function.DoubleSupplier;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.frc2026.FieldConstants.AprilTagLayoutType;
@@ -68,6 +70,8 @@ public class RobotContainer {
   private final CommandXboxController secondary = new CommandXboxController(1);
   private final OverrideSwitches overrides = new OverrideSwitches(5);
 
+  private final Trigger superstructureCoast = overrides.driverSwitch(2);
+
   private final Alert primaryDisconnected =
       new Alert("Primary controller disconnected (port 0).", AlertType.kWarning);
   private final Alert secondaryDisconnected =
@@ -81,6 +85,8 @@ public class RobotContainer {
       new LoggedTunableNumber("PresetHoodAngleDegrees", 30.0);
   private final LoggedTunableNumber presetFlywheelSpeedRadPerSec =
       new LoggedTunableNumber("PresetFlywheelSpeedRadPerSec", 100);
+
+  private boolean coastOverride = false;
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
@@ -154,6 +160,9 @@ public class RobotContainer {
     autoChooser.addDefaultOption("Do Nothing", Commands.none());
     autoChooser.addOption(
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
+
+    hood.setCoastOverride(() -> coastOverride);
+    turret.setCoastOverride(() -> coastOverride);
 
     // Configure the button bindings
     configureButtonBindings();
@@ -253,6 +262,37 @@ public class RobotContainer {
                                     RobotState.getInstance().getEstimatedPose().getTranslation(),
                                     AllianceFlipUtil.apply(Rotation2d.kZero))))
                 .withName("ResetGyro")
+                .ignoringDisable(true));
+
+    // ****** OVERRIDE SWITCHES *****
+
+    // Coast superstructure
+    superstructureCoast
+        .onTrue(
+            Commands.runOnce(
+                    () -> {
+                      if (DriverStation.isDisabled()) {
+                        coastOverride = true;
+                        leds.superstructureCoast = true;
+                      }
+                    })
+                .withName("Superstructure Coast")
+                .ignoringDisable(true))
+        .onFalse(
+            Commands.runOnce(
+                    () -> {
+                      coastOverride = false;
+                      leds.superstructureCoast = false;
+                    })
+                .withName("Superstructure Uncoast")
+                .ignoringDisable(true));
+    RobotModeTriggers.disabled()
+        .onFalse(
+            Commands.runOnce(
+                    () -> {
+                      coastOverride = false;
+                      leds.superstructureCoast = false;
+                    })
                 .ignoringDisable(true));
   }
 
