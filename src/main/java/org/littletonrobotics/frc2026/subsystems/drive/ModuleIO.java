@@ -19,6 +19,7 @@ public interface ModuleIO {
     public double driveAppliedVolts = 0.0;
     public double driveSupplyCurrentAmps = 0.0;
     public double driveTorqueCurrentAmps = 0.0;
+    public double driveTempCelsius;
 
     public boolean turnConnected = false;
     public Rotation2d turnAbsolutePositionRads = Rotation2d.kZero;
@@ -27,6 +28,7 @@ public interface ModuleIO {
     public double turnAppliedVolts = 0.0;
     public double turnSupplyCurrentAmps = 0.0;
     public double turnTorqueCurrentAmps = 0.0;
+    public double turnTempCelsius;
   }
 
   public static enum ModuleIOOutputMode {
