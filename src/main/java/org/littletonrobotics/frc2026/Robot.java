@@ -75,7 +75,8 @@ public class Robot extends LoggedRobot {
           default -> "Unknown";
         });
     try {
-      Logger.recordMetadata("Hostname", InetAddress.getLocalHost().getHostName());
+      Logger.recordMetadata(
+          "Hostname", InetAddress.getLocalHost().getHostName().replaceAll("\\.local$", ""));
     } catch (UnknownHostException e) {
       Logger.recordMetadata("Hostname", "Unknown");
     }
