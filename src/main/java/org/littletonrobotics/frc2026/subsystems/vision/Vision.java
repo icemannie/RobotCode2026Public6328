@@ -266,9 +266,11 @@ public class Vision extends VirtualSubsystem {
         .forEach(RobotState.getInstance()::addVisionObservation);
 
     // Record cycle time
-    LoggedTracer.record("Vision");
+    LoggedTracer.record("Vision/Periodic");
   }
 
   @Override
-  public void periodicAfterScheduler() {}
+  public void periodicAfterScheduler() {
+    LoggedTracer.record("Vision/AfterScheduler");
+  }
 }

@@ -45,6 +45,7 @@ import org.littletonrobotics.frc2026.subsystems.leds.LedsIOHAL;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO;
 import org.littletonrobotics.frc2026.subsystems.vision.Vision;
 import org.littletonrobotics.frc2026.subsystems.vision.VisionIO;
+import org.littletonrobotics.frc2026.util.HubShiftUtil;
 import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.frc2026.util.controllers.OverrideSwitches;
 import org.littletonrobotics.frc2026.util.controllers.RazerWolverineController;
@@ -294,6 +295,8 @@ public class RobotContainer {
                       leds.superstructureCoast = false;
                     })
                 .ignoringDisable(true));
+    RobotModeTriggers.teleop().onTrue(Commands.runOnce(() -> HubShiftUtil.initialize()));
+    RobotModeTriggers.autonomous().onTrue(Commands.runOnce(() -> HubShiftUtil.initialize()));
   }
 
   /** Update dashboard outputs. */

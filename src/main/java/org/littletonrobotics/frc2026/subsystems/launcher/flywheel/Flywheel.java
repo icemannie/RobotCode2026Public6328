@@ -19,6 +19,7 @@ import org.littletonrobotics.frc2026.subsystems.launcher.LaunchCalculator;
 import org.littletonrobotics.frc2026.subsystems.launcher.flywheel.FlywheelIO.FlywheelIOOutputMode;
 import org.littletonrobotics.frc2026.subsystems.launcher.flywheel.FlywheelIO.FlywheelIOOutputs;
 import org.littletonrobotics.frc2026.util.FullSubsystem;
+import org.littletonrobotics.frc2026.util.LoggedTracer;
 import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
@@ -78,12 +79,16 @@ public class Flywheel extends FullSubsystem {
     followerDisconnected.set(
         Robot.showHardwareAlerts()
             && !motorFollowerConnectedDebouncer.calculate(inputs.followerConnected));
+
+    LoggedTracer.record("Flywheel/Periodic");
   }
 
   @Override
   public void periodicAfterScheduler() {
     Logger.recordOutput("Flywheel/Mode", outputs.mode);
     io.applyOutputs(outputs);
+
+    LoggedTracer.record("Flywheel/AfterScheduler");
   }
 
   /** Run closed loop at the specified velocity. */

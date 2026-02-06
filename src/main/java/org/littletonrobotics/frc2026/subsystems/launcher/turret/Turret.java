@@ -155,7 +155,7 @@ public class Turret extends FullSubsystem {
     AlphaMechanism3d.getMeasured().setTurretAngle(new Rotation2d(getPosition()));
 
     // Record cycle time
-    LoggedTracer.record("Turret");
+    LoggedTracer.record("Turret/Periodic");
   }
 
   @Override
@@ -219,6 +219,7 @@ public class Turret extends FullSubsystem {
 
     // Apply outputs
     turretIO.applyOutputs(outputs);
+    LoggedTracer.record("Turret/AfterScheduler");
   }
 
   private void setFieldRelativeTarget(Rotation2d angle, double velocity) {

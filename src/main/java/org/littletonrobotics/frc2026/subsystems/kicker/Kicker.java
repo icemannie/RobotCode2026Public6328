@@ -12,6 +12,7 @@ import lombok.Setter;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystem;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO;
 import org.littletonrobotics.frc2026.util.FullSubsystem;
+import org.littletonrobotics.frc2026.util.LoggedTracer;
 import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.AutoLogOutput;
 
@@ -56,12 +57,14 @@ public class Kicker extends FullSubsystem {
     }
     rollerFront.setVolts(rollerFrontVolts);
     rollerBack.setVolts(rollerBackVolts);
+    LoggedTracer.record("Kicker/Periodic");
   }
 
   @Override
   public void periodicAfterScheduler() {
     rollerFront.periodicAfterScheduler();
     rollerBack.periodicAfterScheduler();
+    LoggedTracer.record("Kicker/AfterScheduler");
   }
 
   public enum Goal {

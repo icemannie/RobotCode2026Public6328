@@ -33,6 +33,7 @@ import org.littletonrobotics.frc2026.Constants.RobotType;
 import org.littletonrobotics.frc2026.subsystems.launcher.LaunchCalculator;
 import org.littletonrobotics.frc2026.subsystems.leds.Leds;
 import org.littletonrobotics.frc2026.util.FullSubsystem;
+import org.littletonrobotics.frc2026.util.HubShiftUtil;
 import org.littletonrobotics.frc2026.util.LoggedTracer;
 import org.littletonrobotics.frc2026.util.VirtualSubsystem;
 import org.littletonrobotics.junction.AutoLogOutputManager;
@@ -195,10 +196,10 @@ public class Robot extends LoggedRobot {
     LoggedTracer.reset();
     VirtualSubsystem.runAllPeriodic();
     CommandScheduler.getInstance().run();
-    LoggedTracer.record("Commands");
+    LoggedTracer.record("Robot/Commands");
     VirtualSubsystem.runAllPeriodicAfterScheduler();
     FullSubsystem.runAllPeriodicAfterScheduler();
-    LoggedTracer.record("PeriodicAfterScheduler");
+    LoggedTracer.record("Robot/AfterScheduler");
 
     // Print auto duration
     if (autonomousCommand != null) {
@@ -234,8 +235,11 @@ public class Robot extends LoggedRobot {
     // Log Mechanism3d data
     AlphaMechanism3d.getMeasured().log("Mechanism3d/Alpha");
 
+    // Log hub state
+    Logger.recordOutput("HubShift", HubShiftUtil.getShiftInfo());
+
     // Record cycle time
-    LoggedTracer.record("RobotPeriodic");
+    LoggedTracer.record("Robot/Periodic");
   }
 
   /** Whether to display alerts related to hardware faults. */

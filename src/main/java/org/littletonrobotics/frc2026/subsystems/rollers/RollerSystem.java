@@ -51,7 +51,7 @@ public class RollerSystem extends FullSubsystem {
     outputs.brakeModeEnabled = brakeModeEnabled;
 
     // Record cycle time
-    LoggedTracer.record(name);
+    LoggedTracer.record("RollerSystem/Periodic");
 
     Logger.recordOutput(inputsName + "/BrakeModeEnabled", brakeModeEnabled);
   }
@@ -59,6 +59,7 @@ public class RollerSystem extends FullSubsystem {
   @Override
   public void periodicAfterScheduler() {
     io.applyOutputs(outputs);
+    LoggedTracer.record("RollerSystem/AfterScheduler");
   }
 
   public double getTorqueCurrent() {

@@ -53,11 +53,12 @@ public class Module {
     turnDisconnectedAlert.set(Robot.showHardwareAlerts() && !inputs.turnConnected);
 
     // Record cycle times
-    LoggedTracer.record("Drive/Module" + index);
+    LoggedTracer.record("Drive/Module" + index + "/Periodic");
   }
 
   public void periodicAfterScheduler() {
     io.applyOutputs(outputs);
+    LoggedTracer.record("Drive/Module" + index + "/AfterScheduler");
   }
 
   /** Runs the module with the specified setpoint state. Mutates the state to optimize it. */

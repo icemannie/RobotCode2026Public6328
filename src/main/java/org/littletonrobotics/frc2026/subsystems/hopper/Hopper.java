@@ -12,6 +12,7 @@ import lombok.Setter;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystem;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO;
 import org.littletonrobotics.frc2026.util.FullSubsystem;
+import org.littletonrobotics.frc2026.util.LoggedTracer;
 import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.AutoLogOutput;
 
@@ -75,6 +76,7 @@ public class Hopper extends FullSubsystem {
     roller.setVolts(rollerVolts);
     leftIndexer.setVolts(leftIndexerVolts);
     rightIndexer.setVolts(rightIndexerVolts);
+    LoggedTracer.record("Hopper/Periodic");
   }
 
   @Override
@@ -82,6 +84,8 @@ public class Hopper extends FullSubsystem {
     roller.periodicAfterScheduler();
     leftIndexer.periodicAfterScheduler();
     rightIndexer.periodicAfterScheduler();
+
+    LoggedTracer.record("Hopper/AfterScheduler");
   }
 
   public enum Goal {

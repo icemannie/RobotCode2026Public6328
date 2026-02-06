@@ -142,12 +142,13 @@ public class Leds extends VirtualSubsystem {
     }
 
     // Record cycle time
-    LoggedTracer.record("LEDs");
+    LoggedTracer.record("Leds/Periodic");
   }
 
   @Override
   public void periodicAfterScheduler() {
     io.applyOutputs(outputs);
+    LoggedTracer.record("Leds/AfterScheduler");
   }
 
   private Color solid(Section section, Color color) {

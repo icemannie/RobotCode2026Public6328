@@ -89,7 +89,7 @@ public class Hood extends FullSubsystem {
     AlphaMechanism3d.getMeasured().setHoodAngle(new Rotation2d(getMeasuredAngleRad()));
 
     // Record cycle time
-    LoggedTracer.record("Hood");
+    LoggedTracer.record("Hood/Periodic");
   }
 
   @Override
@@ -105,6 +105,7 @@ public class Hood extends FullSubsystem {
     }
 
     io.applyOutputs(outputs);
+    LoggedTracer.record("Hood/AfterScheduler");
   }
 
   private void setGoalParams(double angle, double velocity) {

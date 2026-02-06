@@ -126,6 +126,7 @@ public class Drive extends FullSubsystem {
     for (var module : modules) {
       module.periodicAfterScheduler();
     }
+    LoggedTracer.record("Drive/PeriodicAfterScheduler");
   }
 
   /**
