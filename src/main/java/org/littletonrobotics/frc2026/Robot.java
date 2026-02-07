@@ -259,6 +259,7 @@ public class Robot extends LoggedRobot {
   @Override
   public void autonomousInit() {
     autoStart = Timer.getTimestamp();
+    autoMessagePrinted = false;
     autonomousCommand = robotContainer.getAutonomousCommand();
 
     if (autonomousCommand != null) {
