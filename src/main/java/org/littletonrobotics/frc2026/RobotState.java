@@ -29,7 +29,6 @@ import org.littletonrobotics.junction.AutoLogOutput;
 public class RobotState {
   // Constants
   private static final double poseBufferSizeSec = 2.0;
-  private static final double turretAngleBufferSizeSec = 2.0;
   private static final Matrix<N3, N1> odometryStateStdDevs =
       new Matrix<>(VecBuilder.fill(0.003, 0.003, 0.002));
 
@@ -40,8 +39,6 @@ public class RobotState {
   @Getter @AutoLogOutput private Pose2d estimatedPose = Pose2d.kZero;
   private final TimeInterpolatableBuffer<Pose2d> poseBuffer =
       TimeInterpolatableBuffer.createBuffer(poseBufferSizeSec);
-  private final TimeInterpolatableBuffer<Rotation2d> turretAngleBuffer =
-      TimeInterpolatableBuffer.createBuffer(turretAngleBufferSizeSec);
   private final Matrix<N3, N1> qStdDevs = new Matrix<>(Nat.N3(), Nat.N1());
 
   // Odometry fields
@@ -94,11 +91,6 @@ public class RobotState {
     return ChassisSpeeds.fromRobotRelativeSpeeds(robotVelocity, getRotation());
   }
 
-  @AutoLogOutput
-  public Optional<Rotation2d> getTurretAngle(double timestamp) {
-    return turretAngleBuffer.getSample(timestamp);
-  }
-
   /** Adds a new odometry sample from the drive subsystem. */
   public void addOdometryObservation(OdometryObservation observation) {
     // Update odometry pose
@@ -121,11 +113,6 @@ public class RobotState {
     // Apply odometry delta to vision pose estimate
     Twist2d finalTwist = lastOdometryPose.log(odometryPose);
     estimatedPose = estimatedPose.exp(finalTwist);
-  }
-
-  /** Adds a turret pose observation from the turret subsystem */
-  public void addTurretObservation(TurretObservation observation) {
-    turretAngleBuffer.addSample(observation.timestamp(), observation.turretAngle);
   }
 
   /** Adds a new vision pose observation from the vision subsystem. */
@@ -196,6 +183,4 @@ public class RobotState {
       double timestamp, SwerveModulePosition[] wheelPositions, Optional<Rotation2d> gyroAngle) {}
 
   public record VisionObservation(double timestamp, Pose3d visionPose, Matrix<N3, N1> stdDevs) {}
-
-  public record TurretObservation(double timestamp, Rotation2d turretAngle) {}
 }

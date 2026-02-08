@@ -25,6 +25,7 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Flywheel extends FullSubsystem {
+  private final String name;
   private final FlywheelIO io;
   private final FlywheelIOInputsAutoLogged inputs = new FlywheelIOInputsAutoLogged();
   private final FlywheelIOOutputs outputs = new FlywheelIOOutputs();
@@ -51,10 +52,11 @@ public class Flywheel extends FullSubsystem {
 
   @Getter
   @Accessors(fluent = true)
-  @AutoLogOutput
+  @AutoLogOutput(key = "Flywheel/AtGoal")
   private boolean atGoal = false;
 
-  public Flywheel(FlywheelIO io) {
+  public Flywheel(String name, FlywheelIO io) {
+    this.name = name;
     this.io = io;
 
     disconnected = new Alert("Flywheel motor disconnected!", Alert.AlertType.kWarning);
@@ -64,7 +66,7 @@ public class Flywheel extends FullSubsystem {
 
   public void periodic() {
     io.updateInputs(inputs);
-    Logger.processInputs("Flywheel", inputs);
+    Logger.processInputs(name, inputs);
 
     if (torqueCurrentControlDebounce.hasChanged(hashCode())) {
       torqueCurrentDebouncer =
@@ -85,7 +87,7 @@ public class Flywheel extends FullSubsystem {
 
   @Override
   public void periodicAfterScheduler() {
-    Logger.recordOutput("Flywheel/Mode", outputs.mode);
+    Logger.recordOutput(name + "/Mode", outputs.mode);
     io.applyOutputs(outputs);
 
     LoggedTracer.record("Flywheel/AfterScheduler");
@@ -109,7 +111,7 @@ public class Flywheel extends FullSubsystem {
             ? FlywheelIOOutputMode.TORQUE_CURRENT_BANG_BANG
             : FlywheelIOOutputMode.DUTY_CYCLE_BANG_BANG;
     outputs.velocityRadsPerSec = velocityRadsPerSec;
-    Logger.recordOutput("Flywheel/Setpoint", velocityRadsPerSec);
+    Logger.recordOutput(name + "/Setpoint", velocityRadsPerSec);
   }
 
   /** Stops the flywheel. */

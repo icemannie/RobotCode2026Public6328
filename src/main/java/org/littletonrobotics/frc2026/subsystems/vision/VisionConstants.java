@@ -7,20 +7,14 @@
 
 package org.littletonrobotics.frc2026.subsystems.vision;
 
-import static org.littletonrobotics.frc2026.subsystems.launcher.LauncherConstants.turretToCamera;
-
 import edu.wpi.first.math.geometry.Pose3d;
-import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
-import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.geometry.Translation3d;
+import edu.wpi.first.math.util.Units;
 import java.util.Optional;
 import java.util.function.Function;
 import lombok.Builder;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.frc2026.Constants;
-import org.littletonrobotics.frc2026.RobotState;
-import org.littletonrobotics.frc2026.subsystems.launcher.LauncherConstants;
 import org.littletonrobotics.frc2026.util.geometry.GeomUtil;
 
 @ExtensionMethod({GeomUtil.class})
@@ -31,8 +25,8 @@ public class VisionConstants {
   public static final double xyStdDevCoefficient = 0.01;
   public static final double thetaStdDevCoefficient = 0.03;
 
-  private static int monoExposure = 2200;
-  private static double monoGain = 17.5;
+  private static int monoExposure = 1500;
+  private static double monoGain = 15.0;
   private static double monoDenoise = 1.0;
 
   public static CameraConfig[] cameras =
@@ -43,21 +37,17 @@ public class VisionConstants {
               CameraConfig.builder()
                   .poseFunction(
                       (Double timestamp) -> {
-                        Optional<Rotation2d> turretAngle =
-                            RobotState.getInstance().getTurretAngle(timestamp);
-                        if (turretAngle.isEmpty()) {
-                          return Optional.empty();
-                        } else {
-                          return Optional.of(
-                              LauncherConstants.robotToTurret
-                                  .toPose3d()
-                                  .transformBy(
-                                      new Transform3d(
-                                          Translation3d.kZero, new Rotation3d(turretAngle.get())))
-                                  .transformBy(turretToCamera));
-                        }
+                        return Optional.of(
+                            new Pose3d(
+                                Units.inchesToMeters(-28.0 / 2.0 + 2.5),
+                                Units.inchesToMeters(-28.0 / 2.0 + 2.75),
+                                Units.inchesToMeters(18.75),
+                                new Rotation3d(
+                                    0.0,
+                                    Units.degreesToRadians(-27.0),
+                                    Units.degreesToRadians(-152.5))));
                       })
-                  .id("40552081")
+                  .id("40530395")
                   .width(1600)
                   .height(1200)
                   .exposure(monoExposure)

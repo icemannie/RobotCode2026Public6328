@@ -13,14 +13,13 @@ public interface FlywheelIO {
   @AutoLog
   public static class FlywheelIOInputs {
     public boolean connected;
+    public boolean followerConnected;
     public double positionRads;
     public double velocityRadsPerSec;
     public double appliedVoltage;
     public double supplyCurrentAmps;
     public double torqueCurrentAmps;
     public double tempCelsius;
-
-    public boolean followerConnected;
     public double followerSupplyCurrentAmps;
     public double followerTempCelsius;
   }

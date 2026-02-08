@@ -31,14 +31,10 @@ import org.littletonrobotics.frc2026.subsystems.drive.ModuleIOSim;
 import org.littletonrobotics.frc2026.subsystems.hopper.Hopper;
 import org.littletonrobotics.frc2026.subsystems.intake.Intake;
 import org.littletonrobotics.frc2026.subsystems.kicker.Kicker;
-import org.littletonrobotics.frc2026.subsystems.launcher.LaunchCalculator;
 import org.littletonrobotics.frc2026.subsystems.launcher.flywheel.Flywheel;
 import org.littletonrobotics.frc2026.subsystems.launcher.flywheel.FlywheelIO;
 import org.littletonrobotics.frc2026.subsystems.launcher.hood.Hood;
 import org.littletonrobotics.frc2026.subsystems.launcher.hood.HoodIO;
-import org.littletonrobotics.frc2026.subsystems.launcher.turret.Turret;
-import org.littletonrobotics.frc2026.subsystems.launcher.turret.TurretIO;
-import org.littletonrobotics.frc2026.subsystems.launcher.turret.TurretIOSim;
 import org.littletonrobotics.frc2026.subsystems.leds.Leds;
 import org.littletonrobotics.frc2026.subsystems.leds.LedsIO;
 import org.littletonrobotics.frc2026.subsystems.leds.LedsIOHAL;
@@ -61,8 +57,8 @@ public class RobotContainer {
   private Hopper hopper;
   private Kicker kicker;
   private Hood hood;
-  private Flywheel flywheel;
-  private Turret turret;
+  private Flywheel leftFlywheel;
+  private Flywheel rightFlywheel;
   private Vision vision;
   private Leds leds;
 
@@ -85,7 +81,7 @@ public class RobotContainer {
   private final LoggedTunableNumber presetHoodAngleDegrees =
       new LoggedTunableNumber("PresetHoodAngleDegrees", 30.0);
   private final LoggedTunableNumber presetFlywheelSpeedRadPerSec =
-      new LoggedTunableNumber("PresetFlywheelSpeedRadPerSec", 100);
+      new LoggedTunableNumber("PresetFlywheelSpeedRadPerSec", 500);
 
   private boolean coastOverride = false;
 
@@ -109,7 +105,6 @@ public class RobotContainer {
                   new ModuleIOSim(),
                   new ModuleIOSim(),
                   new ModuleIOSim());
-          turret = new Turret(new TurretIOSim() {});
           leds = new Leds(new LedsIOHAL());
           break;
       }
@@ -129,17 +124,16 @@ public class RobotContainer {
       intake = new Intake(new RollerSystemIO() {});
     }
     if (hopper == null) {
-      hopper =
-          new Hopper(new RollerSystemIO() {}, new RollerSystemIO() {}, new RollerSystemIO() {});
+      hopper = new Hopper(new RollerSystemIO() {}, new RollerSystemIO() {});
     }
     if (hood == null) {
       hood = new Hood(new HoodIO() {});
     }
-    if (flywheel == null) {
-      flywheel = new Flywheel(new FlywheelIO() {});
+    if (leftFlywheel == null) {
+      leftFlywheel = new Flywheel("FlywheelLeft", new FlywheelIO() {});
     }
-    if (turret == null) {
-      turret = new Turret(new TurretIO() {});
+    if (rightFlywheel == null) {
+      rightFlywheel = new Flywheel("FlywheelRight", new FlywheelIO() {});
     }
     if (kicker == null) {
       kicker = new Kicker(new RollerSystemIO() {}, new RollerSystemIO() {});
@@ -163,15 +157,14 @@ public class RobotContainer {
         "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
 
     hood.setCoastOverride(() -> coastOverride);
-    turret.setCoastOverride(() -> coastOverride);
 
     // Configure the button bindings
     configureButtonBindings();
 
     // Set default commands
     hood.setDefaultCommand(hood.runTrackTargetCommand());
-    turret.setDefaultCommand(turret.runTrackTargetCommand());
-    flywheel.setDefaultCommand(flywheel.runTrackTargetCommand());
+    leftFlywheel.setDefaultCommand(leftFlywheel.runTrackTargetCommand());
+    rightFlywheel.setDefaultCommand(rightFlywheel.runTrackTargetCommand());
     intake.setDefaultCommand(
         Commands.startEnd(
             () -> intake.setGoal(Intake.Goal.INTAKE),
@@ -188,15 +181,7 @@ public class RobotContainer {
     drive.setDefaultCommand(DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega));
 
     // ***** PRIMARY CONTROLLER *****
-    primary.x().onTrue(hood.zeroCommand().alongWith(turret.zeroCommand()));
-    // primary
-    //     .leftTrigger()
-    //     .negate()
-    //     .whileTrue(
-    //         Commands.startEnd(
-    //             () -> intake.setGoal(Intake.Goal.INTAKE),
-    //             () -> intake.setGoal(Intake.Goal.STOP),
-    //             intake));
+    primary.x().onTrue(hood.zeroCommand());
     primary
         .rightTrigger()
         .whileTrue(
@@ -217,21 +202,21 @@ public class RobotContainer {
     primary
         .leftClaw()
         .whileTrue(
-            flywheel
+            leftFlywheel
                 .runFixedCommand(presetFlywheelSpeedRadPerSec)
+                .alongWith(rightFlywheel.runFixedCommand(presetFlywheelSpeedRadPerSec))
                 .alongWith(
                     hood.runFixedCommand(
-                        () -> Units.degreesToRadians(presetHoodAngleDegrees.get()), () -> 0.0),
-                    turret.runTrackTargetActiveLaunchingCommand()));
+                        () -> Units.degreesToRadians(presetHoodAngleDegrees.get()), () -> 0.0)));
     primary
         .rightBumper()
-        .negate()
-        .whileTrue(turret.runTrackTargetActiveLaunchingCommand())
-        .and(() -> LaunchCalculator.getInstance().getParameters().isValid())
-        .and(hood::atGoal)
-        .and(flywheel::atGoal)
-        .and(turret::atGoal)
-        .whileTrueContinuous(
+        // .whileTrue(DriveCommands.joystickDriveWhileLaunching(drive, driverX, driverY))
+        // .and(() -> LaunchCalculator.getInstance().getParameters().isValid())
+        // .and(hood::atGoal)
+        // .and(leftFlywheel::atGoal)
+        // .and(rightFlywheel::atGoal)
+        // .and(() -> DriveCommands.atLaunchGoal())
+        .whileTrue(
             Commands.parallel(
                 Commands.startEnd(
                     () -> hopper.setGoal(Hopper.Goal.LAUNCH),
@@ -240,13 +225,13 @@ public class RobotContainer {
                 Commands.startEnd(
                     () -> kicker.setGoal(Kicker.Goal.LAUNCH),
                     () -> kicker.setGoal(Kicker.Goal.STOP),
-                    kicker)))
-        .onFalse(
-            Commands.startEnd(
-                    () -> kicker.setGoal(Kicker.Goal.OUTTAKE),
-                    () -> kicker.setGoal(Kicker.Goal.STOP),
-                    kicker)
-                .withTimeout(0.5));
+                    kicker)));
+    // .onFalse(
+    //     Commands.startEnd(
+    //             () -> kicker.setGoal(Kicker.Goal.OUTTAKE),
+    //             () -> kicker.setGoal(Kicker.Goal.STOP),
+    //             kicker)
+    //         .withTimeout(0.5));
 
     // ***** SECONDARY CONTROLLER *****
 

@@ -29,8 +29,8 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Hood extends FullSubsystem {
-  private static final double minAngle = Units.degreesToRadians(19);
-  private static final double maxAngle = Units.degreesToRadians(51);
+  private static final double minAngle = Units.degreesToRadians(15);
+  private static final double maxAngle = Units.degreesToRadians(45);
 
   private static final LoggedTunableNumber kP = new LoggedTunableNumber("Hood/kP");
   private static final LoggedTunableNumber kD = new LoggedTunableNumber("Hood/kD");
@@ -85,7 +85,7 @@ public class Hood extends FullSubsystem {
     outputs.kP = kP.get();
     outputs.kD = kD.get();
 
-    // Visualize turret in 3D
+    // Visualize launcher in 3D
     AlphaMechanism3d.getMeasured().setHoodAngle(new Rotation2d(getMeasuredAngleRad()));
 
     // Record cycle time

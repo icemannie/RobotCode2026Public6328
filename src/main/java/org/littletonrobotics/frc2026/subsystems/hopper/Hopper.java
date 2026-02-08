@@ -31,60 +31,42 @@ public class Hopper extends FullSubsystem {
       new LoggedTunableNumber("Hopper/Indexer/LeftOuttakeVolts", -6.0);
 
   private final RollerSystem roller;
-  private final RollerSystem leftIndexer;
-  private final RollerSystem rightIndexer;
+  private final RollerSystem rollerRight;
 
   @Getter @Setter @AutoLogOutput private Goal goal = Goal.STOP;
 
-  public Hopper(
-      RollerSystemIO rollerIO,
-      RollerSystemIO leftIndexRollerIO,
-      RollerSystemIO rightIndexRollerIO) {
-    this.roller = new RollerSystem("Hopper roller", "Hopper/Roller", rollerIO);
-    this.leftIndexer = new RollerSystem("Left indexer", "Hopper/LeftIndexer", leftIndexRollerIO);
-    this.rightIndexer =
-        new RollerSystem("Right indexer", "Hopper/RightIndexer", rightIndexRollerIO);
+  public Hopper(RollerSystemIO rollerIO, RollerSystemIO rollerIORight) {
+    this.roller = new RollerSystem("Hopper roller left", "Hopper/RollerLeft", rollerIO);
+    this.rollerRight = new RollerSystem("Hopper roller right", "Hopper/RollerRight", rollerIORight);
   }
 
   public void periodic() {
 
     roller.periodic();
-    leftIndexer.periodic();
-    rightIndexer.periodic();
+    rollerRight.periodic();
 
     double rollerVolts = 0.0;
-    double leftIndexerVolts = 0.0;
-    double rightIndexerVolts = 0.0;
 
     switch (goal) {
       case LAUNCH -> {
         rollerVolts = rollerLaunchVolts.get();
-        leftIndexerVolts = leftIndexerLaunchVolts.get();
-        rightIndexerVolts = rightIndexerLaunchVolts.get();
       }
       case OUTTAKE -> {
         rollerVolts = rollerOuttakeVolts.get();
-        leftIndexerVolts = leftIndexerOuttakeVolts.get();
-        rightIndexerVolts = rightIndexerOuttakeVolts.get();
       }
       case STOP -> {
         rollerVolts = 0.0;
-        leftIndexerVolts = 0.0;
-        rightIndexerVolts = 0.0;
       }
     }
-    roller.setVolts(rollerVolts);
-    leftIndexer.setVolts(leftIndexerVolts);
-    rightIndexer.setVolts(rightIndexerVolts);
+    roller.runOpenLoop(rollerVolts);
+    rollerRight.runOpenLoop(rollerVolts);
     LoggedTracer.record("Hopper/Periodic");
   }
 
   @Override
   public void periodicAfterScheduler() {
     roller.periodicAfterScheduler();
-    leftIndexer.periodicAfterScheduler();
-    rightIndexer.periodicAfterScheduler();
-
+    rollerRight.periodicAfterScheduler();
     LoggedTracer.record("Hopper/AfterScheduler");
   }
 

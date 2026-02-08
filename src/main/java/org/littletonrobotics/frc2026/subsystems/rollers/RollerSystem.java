@@ -9,8 +9,11 @@ package org.littletonrobotics.frc2026.subsystems.rollers;
 
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.DriverStation;
+import java.util.function.BooleanSupplier;
 import lombok.Setter;
 import org.littletonrobotics.frc2026.Robot;
+import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO.RollerSystemIOMode;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO.RollerSystemIOOutputs;
 import org.littletonrobotics.frc2026.util.FullSubsystem;
 import org.littletonrobotics.frc2026.util.LoggedTracer;
@@ -23,12 +26,24 @@ public class RollerSystem extends FullSubsystem {
   protected final RollerSystemIOInputsAutoLogged inputs = new RollerSystemIOInputsAutoLogged();
   private final RollerSystemIOOutputs outputs = new RollerSystemIOOutputs();
 
+  private double kS = 0.0;
+  private double kV = 0.0;
+
+  @Setter private BooleanSupplier coastOverride = () -> false;
+
   private final Debouncer motorConnectedDebouncer =
       new Debouncer(0.5, Debouncer.DebounceType.kFalling);
   private final Alert disconnected;
 
-  @Setter private double volts = 0.0;
-  @Setter private boolean brakeModeEnabled = true;
+  public RollerSystem(String name, String inputsName, RollerSystemIO io, double kP, double kD) {
+    this.name = name;
+    this.inputsName = inputsName;
+    this.io = io;
+
+    disconnected = new Alert(name + " motor disconnected!", Alert.AlertType.kWarning);
+    outputs.kP = kP;
+    outputs.kD = kD;
+  }
 
   public RollerSystem(String name, String inputsName, RollerSystemIO io) {
     this.name = name;
@@ -39,27 +54,50 @@ public class RollerSystem extends FullSubsystem {
   }
 
   public void periodic() {
+
     io.updateInputs(inputs);
     Logger.processInputs(inputsName, inputs);
     disconnected.set(
         Robot.showHardwareAlerts() && !motorConnectedDebouncer.calculate(inputs.connected));
 
-    // Run roller
-    outputs.appliedVoltage = volts;
+    // Update mode
+    if (DriverStation.isDisabled()) {
+      outputs.mode = RollerSystemIOMode.BRAKE;
 
-    // Update brake mode
-    outputs.brakeModeEnabled = brakeModeEnabled;
+      if (coastOverride.getAsBoolean()) {
+        outputs.mode = RollerSystemIOMode.COAST;
+      }
+    }
 
     // Record cycle time
     LoggedTracer.record("RollerSystem/Periodic");
-
-    Logger.recordOutput(inputsName + "/BrakeModeEnabled", brakeModeEnabled);
   }
 
   @Override
   public void periodicAfterScheduler() {
     io.applyOutputs(outputs);
     LoggedTracer.record("RollerSystem/AfterScheduler");
+  }
+
+  public void runOpenLoop(double volts) {
+    outputs.mode = RollerSystemIOMode.VOLTAGE_CONTROL;
+    outputs.appliedVoltage = volts;
+  }
+
+  public void runClosedLoop(double setpointVelocity) {
+    outputs.mode = RollerSystemIOMode.CLOSED_LOOP;
+    outputs.velocity = setpointVelocity;
+    outputs.feedforward = Math.signum(setpointVelocity) * kS + setpointVelocity * kV;
+  }
+
+  public void setGains(double kP, double kD) {
+    outputs.kP = kP;
+    outputs.kD = kD;
+  }
+
+  public void setFeedforward(double kS, double kV) {
+    this.kS = kS;
+    this.kV = kV;
   }
 
   public double getTorqueCurrent() {
@@ -71,6 +109,6 @@ public class RollerSystem extends FullSubsystem {
   }
 
   public void stop() {
-    volts = 0.0;
+    outputs.mode = RollerSystemIOMode.BRAKE;
   }
 }

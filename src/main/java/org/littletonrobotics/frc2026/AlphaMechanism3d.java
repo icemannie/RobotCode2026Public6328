@@ -7,11 +7,9 @@
 
 package org.littletonrobotics.frc2026;
 
-import edu.wpi.first.math.geometry.Pose3d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
-import edu.wpi.first.math.geometry.Translation3d;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.ExtensionMethod;
@@ -30,27 +28,16 @@ public class AlphaMechanism3d {
     return measured;
   }
 
-  @Getter @Setter private Rotation2d turretAngle = Rotation2d.kZero; // Robot-relative
   @Getter @Setter private Rotation2d hoodAngle = Rotation2d.kZero; // Relative to the ground
 
   /** Log the component poses and camera pose. */
   public void log(String key) {
-    var turretPose =
-        LauncherConstants.robotToTurret
+    var hoodPose =
+        LauncherConstants.robotToLauncher
             .toPose3d()
             .transformBy(
                 new Transform3d(
-                    Translation3d.kZero, new Rotation3d(0.0, 0.0, turretAngle.getRadians())));
-    var hoodPose =
-        turretPose.transformBy(
-            new Transform3d(
-                0.105, 0.0, 0.092, new Rotation3d(0.0, -hoodAngle.getRadians(), Math.PI)));
-    Logger.recordOutput(key + "/Components", turretPose, hoodPose);
-
-    var cameraPose =
-        new Pose3d(RobotState.getInstance().getEstimatedPose())
-            .transformBy(turretPose.toTransform3d())
-            .transformBy(LauncherConstants.turretToCamera);
-    Logger.recordOutput(key + "/CameraPose", cameraPose);
+                    0.0, 0.0, 0.0, new Rotation3d(0.0, -hoodAngle.getRadians(), Math.PI)));
+    Logger.recordOutput(key + "/Components", hoodPose);
   }
 }

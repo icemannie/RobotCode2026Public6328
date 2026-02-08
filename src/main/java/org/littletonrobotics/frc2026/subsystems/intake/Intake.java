@@ -47,7 +47,7 @@ public class Intake extends FullSubsystem {
         rollerVolts = 0.0;
       }
     }
-    roller.setVolts(rollerVolts);
+    roller.runOpenLoop(rollerVolts);
     LoggedTracer.record("Intake/Periodic");
   }
 
