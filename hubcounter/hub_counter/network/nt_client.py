@@ -47,6 +47,8 @@ class NetworkTablesClient:
         self._is_auto_sub = None
         self._is_teleop_sub = None
         self._connected = False
+        self._is_external_sub = None
+        self._led_pattern_sub = None
 
         self._monitor_thread: Optional[threading.Thread] = None
         self._stop_monitor = threading.Event()
@@ -105,6 +107,8 @@ class NetworkTablesClient:
         self._match_time_sub = fms_table.getDoubleTopic("MatchTime").subscribe(0.0)
         self._is_auto_sub = fms_table.getBooleanTopic("IsAutonomous").subscribe(False)
         self._is_teleop_sub = fms_table.getBooleanTopic("IsTeleop").subscribe(False)
+        self._is_external_sub = fms_table.getBooleanTopic("IsExternal").subscribe(False)
+        self._led_pattern_sub = fms_table.getIntegerTopic("LedPattern").subscribe(0)
         logger.debug("Subscribers created for FMSInfo topics")
 
         # Add connection listener
@@ -151,6 +155,10 @@ class NetworkTablesClient:
             self._is_auto_sub.close()
         if self._is_teleop_sub:
             self._is_teleop_sub.close()
+        if self._is_external_sub:
+            self._is_external_sub.close()
+        if self._led_pattern_sub:
+            self._led_pattern_sub.close()
 
         self._inst.stopClient()
         self._connected = False

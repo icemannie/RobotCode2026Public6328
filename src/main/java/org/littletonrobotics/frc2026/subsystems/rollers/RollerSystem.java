@@ -15,11 +15,9 @@ import lombok.Setter;
 import org.littletonrobotics.frc2026.Robot;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO.RollerSystemIOMode;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO.RollerSystemIOOutputs;
-import org.littletonrobotics.frc2026.util.FullSubsystem;
-import org.littletonrobotics.frc2026.util.LoggedTracer;
 import org.littletonrobotics.junction.Logger;
 
-public class RollerSystem extends FullSubsystem {
+public class RollerSystem {
   private final String name;
   private final String inputsName;
   private final RollerSystemIO io;
@@ -68,15 +66,10 @@ public class RollerSystem extends FullSubsystem {
         outputs.mode = RollerSystemIOMode.COAST;
       }
     }
-
-    // Record cycle time
-    LoggedTracer.record("RollerSystem/Periodic");
   }
 
-  @Override
   public void periodicAfterScheduler() {
     io.applyOutputs(outputs);
-    LoggedTracer.record("RollerSystem/AfterScheduler");
   }
 
   public void runOpenLoop(double volts) {

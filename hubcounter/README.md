@@ -1,6 +1,6 @@
 # Hub Counter
 
-Ball counter for FRC Team 6328's hub return system. Monitors four channels via GPIO, displays shot feedback on WS2813 LED strips, publishes counts over NetworkTables, and serves a live web dashboard.
+Ball counter for FRC Team 6328's hub return system. Monitors four channels via GPIO, displays feedback on WS2813 LED strips, publishes counts over NetworkTables, and serves a live web dashboard.
 
 ## Requirements
 
@@ -73,8 +73,8 @@ network:
   robot_address: 10.63.28.2
 
 thresholds:
-  yellow: 100          # Total shots to switch LED pulse to yellow
-  blue: 360            # Total shots to switch LED pulse to blue
+  yellow: 100          # Total fuel to switch LED pulse to yellow
+  blue: 360            # Total fuel to switch LED pulse to blue
 
 colors:
   red: [255, 0, 0]
