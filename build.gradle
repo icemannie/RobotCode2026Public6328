@@ -13,6 +13,10 @@ java {
 
 def ROBOT_MAIN_CLASS = "org.littletonrobotics.frc2026.Main"
 
+repositories {
+    mavenCentral()
+}
+
 // Define my targets (RoboRIO) and artifacts (deployable files)
 // This is added by GradleRIO's backing project DeployUtils.
 deploy {
@@ -73,6 +77,7 @@ dependencies {
     annotationProcessor wpi.java.deps.wpilibAnnotations()
     implementation wpi.java.deps.wpilib()
     implementation wpi.java.vendor.java()
+    implementation 'com.google.guava:guava:31.1-jre'
 
     roborioDebug wpi.java.deps.wpilibJniDebug(wpi.platforms.roborio)
     roborioDebug wpi.java.vendor.jniDebug(wpi.platforms.roborio)
@@ -132,6 +137,13 @@ wpi.java.configureTestTasks(test)
 tasks.withType(JavaCompile) {
     options.compilerArgs.add '-XDstringConcat=inline'
 }
+
+// Generate drive trajectories when building
+task(generateDriveTrajectories, dependsOn: "classes", type: JavaExec) {
+    mainClass = "org.littletonrobotics.frc2026.util.vts.GenerateTrajectories"
+    classpath = sourceSets.main.runtimeClasspath
+}
+compileJava.finalizedBy generateDriveTrajectories
 
 // Check robot type when deploying
 task(checkConstantsDeploy, dependsOn: "classes", type: JavaExec) {

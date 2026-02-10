@@ -7,12 +7,14 @@
 
 package org.littletonrobotics.frc2026;
 
+import choreo.Choreo;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.Filesystem;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Command.InterruptionBehavior;
@@ -20,6 +22,8 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
 import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
+import java.io.File;
+import java.lang.reflect.Method;
 import java.util.function.DoubleSupplier;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.frc2026.FieldConstants.AprilTagLayoutType;
@@ -148,6 +152,15 @@ public class RobotContainer {
     }
     if (leds == null) {
       leds = new Leds(new LedsIO() {});
+    }
+
+    // Set up Choreo directory
+    try {
+      Method setChoreoDirMethod = Choreo.class.getDeclaredMethod("setChoreoDir", File.class);
+      setChoreoDirMethod.setAccessible(true);
+      setChoreoDirMethod.invoke(null, new File(Filesystem.getDeployDirectory(), "vts"));
+    } catch (Exception e) {
+      DriverStation.reportWarning("Failed to set Choreo directory.", false);
     }
 
     // Set up auto routines

@@ -17,9 +17,17 @@ public class DriveConstants {
 
   public static final double compbotTrackWidthXInches = 20.75;
   public static final double compbotTrackWidthYInches = 20.75;
+  public static final double compbotFullWidthXInches = 34.65;
+  public static final double compbotFullWidthYInches = 33.65;
   public static final double compbotMaxLinearSpeed = 4.69;
+  public static final double compbotMaxTrajectoryLinearSpeed = 4.0;
   public static final double compbotMaxAngularSpeed = 6.46; // maxLinearSpeed / driveBaseRadius
   public static final double compbotWheelRadiusInches = 2.0;
+  public static final double compbotTrajectoryWheelRadiusInches = 2.0;
+  public static final double compbotMaxTrajectoryWheelTorque = 3.0; // N * m
+  public static final double compbotMassLbs = 125.0;
+  public static final double compbotWheelCOF = 1.5;
+  public static final double compbotRotationMOI = 6.0; // kg * m^2
 
   // SDS MK5i modules, R2 reduction
   public static final double compbotDriveReduction = 6.02678571429;
@@ -51,9 +59,17 @@ public class DriveConstants {
 
   public static final double alphabotTrackWidthXInches = 22.75;
   public static final double alphabotTrackWidthYInches = 22.75;
+  public static final double alphabotFullWidthXInches = 28;
+  public static final double alphabotFullWidthYInches = 28;
   public static final double alphabotMaxLinearSpeed = 4.69;
+  public static final double alphabotMaxTrajectoryLinearSpeed = 4.0;
   public static final double alphabotMaxAngularSpeed = 6.46; // maxLinearSpeed / driveBaseRadius
   public static final double alphabotWheelRadiusInches = 2.0;
+  public static final double alphabotTrajectoryWheelRadiusInches = 2.0;
+  public static final double alphabotMaxTrajectoryWheelTorque = 3.0; // N * m
+  public static final double alphabotMassLbs = 125.0;
+  public static final double alphabotWheelCOF = 1.5;
+  public static final double alphabotRotationMOI = 6.0; // kg * m^2
 
   // SDS MK4i modules, L3 reduction
   public static final double alphabotDriveReduction = 6.1224489796;
@@ -103,14 +119,45 @@ public class DriveConstants {
           Constants.robot == RobotType.ALPHABOT
               ? alphabotTrackWidthYInches
               : compbotTrackWidthYInches);
+  public static final double fullWidthX =
+      Units.inchesToMeters(
+          Constants.robot == RobotType.ALPHABOT
+              ? alphabotFullWidthXInches
+              : compbotFullWidthXInches);
+  public static final double fullWidthY =
+      Units.inchesToMeters(
+          Constants.robot == RobotType.ALPHABOT
+              ? alphabotFullWidthYInches
+              : compbotFullWidthYInches);
   public static final double driveBaseRadius = Math.hypot(trackWidthX / 2, trackWidthY / 2);
   public static final double maxLinearSpeed =
       Constants.robot == RobotType.ALPHABOT ? alphabotMaxLinearSpeed : compbotMaxLinearSpeed;
+  public static final double maxTrajectoryLinearSpeed =
+      Constants.robot == RobotType.ALPHABOT
+          ? alphabotMaxTrajectoryLinearSpeed
+          : compbotMaxTrajectoryLinearSpeed;
   public static final double maxAngularSpeed =
       Constants.robot == RobotType.ALPHABOT ? alphabotMaxAngularSpeed : compbotMaxAngularSpeed;
   public static final double wheelRadiusInches =
       Constants.robot == RobotType.ALPHABOT ? alphabotWheelRadiusInches : compbotWheelRadiusInches;
+  public static final double trajectoryWheelRadiusInches =
+      Constants.robot == RobotType.ALPHABOT
+          ? alphabotTrajectoryWheelRadiusInches
+          : compbotTrajectoryWheelRadiusInches;
+  public static final double maxTrajectoryWheelTorque =
+      Constants.robot == RobotType.ALPHABOT
+          ? alphabotMaxTrajectoryWheelTorque
+          : compbotMaxTrajectoryWheelTorque;
   public static final double wheelRadius = Units.inchesToMeters(wheelRadiusInches);
+  public static final double trajectoryWheelRadius =
+      Units.inchesToMeters(trajectoryWheelRadiusInches);
+  public static final double mass =
+      Units.lbsToKilograms(
+          Constants.robot == RobotType.ALPHABOT ? alphabotMassLbs : compbotMassLbs);
+  public static final double wheelCOF =
+      Constants.robot == RobotType.ALPHABOT ? alphabotWheelCOF : compbotWheelCOF;
+  public static final double rotationMOI =
+      Constants.robot == RobotType.ALPHABOT ? alphabotRotationMOI : compbotRotationMOI;
   public static final Translation2d[] moduleTranslations = {
     new Translation2d(trackWidthX / 2, trackWidthY / 2),
     new Translation2d(trackWidthX / 2, -trackWidthY / 2),
