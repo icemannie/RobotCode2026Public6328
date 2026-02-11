@@ -15,7 +15,7 @@ from .gpio.ball_counter import BallCounter
 from .gpio.channel_monitor import ChannelMonitor
 from .led.controller import LEDController
 from .network.nt_client import NetworkTablesClient
-from .web.routes.api import broadcast_counts, broadcast_nt_status, set_dependencies
+from .web.routes.api import broadcast_counts, broadcast_external_state, broadcast_nt_status, set_dependencies
 from .web.server import create_app
 
 logger = logging.getLogger(__name__)
@@ -44,6 +44,13 @@ class HubCounterApp:
         self._loop: Optional[asyncio.AbstractEventLoop] = None
         self._shutdown_event = asyncio.Event()
         self._server: Optional[uvicorn.Server] = None
+        self._external_poll_task: Optional[asyncio.Task] = None
+        self._is_external = False
+        self._external_dismissed = False
+        self._last_robot_external = False
+        self._last_external_pattern = -1
+        self._last_external_color = ""
+        self._pause_counting = False
 
         logger.info("HubCounterApp initialized")
 
@@ -89,10 +96,15 @@ class HubCounterApp:
         Args:
             channel: Channel where ball was detected.
         """
+        # Check if counting is paused (only applies during external control)
+        if self._is_external and self._pause_counting:
+            logger.debug(f"Ball detected on channel {channel} but counting is paused")
+            return
+
         counts = self._ball_counter.increment(channel)
 
-        # Trigger LED pulse
-        if self._led_controller and self._loop:
+        # Trigger LED pulse only when not in external control mode
+        if self._led_controller and self._loop and not self._is_external:
             self._led_controller.trigger_pulse(counts.total, self._loop)
 
         # Publish to NetworkTables
@@ -120,6 +132,120 @@ class HubCounterApp:
         connected = payload.get("connected", False)
         await broadcast_nt_status(connected)
 
+    async def _poll_external_state(self) -> None:
+        """Poll NetworkTables for external control state changes every 100ms."""
+        PATTERN_NAMES = {0: "Solid", 1: "Blink", 2: "Racing"}
+
+        while True:
+            try:
+                await asyncio.sleep(0.1)
+
+                if not self._nt_client:
+                    continue
+
+                # Check for reset request
+                if self._nt_client.get_reset_requested():
+                    logger.info("Reset requested via NetworkTables")
+                    counts = self._ball_counter.reset()
+                    self._nt_client.publish_counts(counts)
+                    self._nt_client.acknowledge_reset()
+                    await broadcast_counts(counts)
+
+                state = self._nt_client.get_external_state()
+                robot_external = state["is_external"]
+                pattern = state["led_pattern"]
+                color_hex = state["led_color"]
+                self._pause_counting = state["pause_counting"]
+
+                # Detect rising edge on robot's IsExternal (false->true)
+                if robot_external and not self._last_robot_external:
+                    if not self._external_dismissed:
+                        self._is_external = True
+                        self._last_external_pattern = -1  # force re-apply
+                        self._last_external_color = ""
+                        logger.info("Entering external control mode")
+                        await broadcast_external_state(
+                            True, PATTERN_NAMES.get(pattern, "Unknown"), color_hex
+                        )
+
+                # Detect falling edge on robot's IsExternal (true->false)
+                if not robot_external and self._last_robot_external:
+                    self._external_dismissed = False
+                    if self._is_external:
+                        self._is_external = False
+                        if self._led_controller:
+                            self._led_controller.stop_pattern()
+                        self._last_external_pattern = -1
+                        self._last_external_color = ""
+                        logger.info("Exiting external control mode")
+                        await broadcast_external_state(False, "", "")
+
+                self._last_robot_external = robot_external
+
+                # Apply LED pattern/color if in external mode
+                if self._is_external and self._led_controller and self._loop:
+                    if pattern != self._last_external_pattern or color_hex != self._last_external_color:
+                        # Parse hex color
+                        rgb = self._parse_hex_color(color_hex)
+                        self._last_external_pattern = pattern
+                        self._last_external_color = color_hex
+
+                        if pattern == 0:  # Solid
+                            self._led_controller.stop_pattern()
+                            self._led_controller.set_solid(rgb)
+                        elif pattern == 1:  # Blink
+                            self._led_controller.set_blink(rgb, self._loop)
+                        elif pattern == 2:  # Racing
+                            self._led_controller.set_racing(rgb, self._loop)
+
+                        logger.info(
+                            f"External LED: pattern={PATTERN_NAMES.get(pattern, pattern)}, color={color_hex}"
+                        )
+                        await broadcast_external_state(
+                            True, PATTERN_NAMES.get(pattern, "Unknown"), color_hex
+                        )
+
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                logger.error(f"Error in external state poll: {e}", exc_info=True)
+
+    @staticmethod
+    def _parse_hex_color(hex_color: str) -> tuple[int, int, int]:
+        """Parse an HTML hex color string to an RGB tuple.
+
+        Args:
+            hex_color: Color string like '#ff0000'.
+
+        Returns:
+            RGB tuple.
+        """
+        hex_color = hex_color.lstrip("#")
+        if len(hex_color) != 6:
+            return (0, 0, 0)
+        try:
+            r = int(hex_color[0:2], 16)
+            g = int(hex_color[2:4], 16)
+            b = int(hex_color[4:6], 16)
+            return (r, g, b)
+        except ValueError:
+            return (0, 0, 0)
+
+    async def dismiss_external(self) -> None:
+        """Dismiss external control mode (UI override).
+
+        Sets _external_dismissed so the robot's IsExternal is ignored
+        until it toggles off and back on.
+        """
+        self._external_dismissed = True
+        self._is_external = False
+        self._last_external_pattern = -1
+        self._last_external_color = ""
+        if self._led_controller:
+            self._led_controller.stop_pattern()
+        logger.info("External control dismissed by user")
+        await broadcast_external_state(False, "", "")
+
     def _save_settings(self, settings: Settings) -> None:
         """Save settings to file.
 
@@ -141,6 +267,7 @@ class HubCounterApp:
             led_controller=self._led_controller,
             settings=self._settings,
             save_settings_fn=self._save_settings,
+            app=self,
         )
 
         config = uvicorn.Config(
@@ -183,6 +310,9 @@ class HubCounterApp:
         if self._nt_client:
             self._nt_client.start()
 
+        # Start external control polling
+        self._external_poll_task = asyncio.create_task(self._poll_external_state())
+
         logger.info("Hub Counter started")
 
         try:
@@ -194,6 +324,14 @@ class HubCounterApp:
     async def shutdown(self) -> None:
         """Clean up and shut down all components."""
         logger.info("Shutting down...")
+
+        # Stop external poll task
+        if self._external_poll_task and not self._external_poll_task.done():
+            self._external_poll_task.cancel()
+            try:
+                await self._external_poll_task
+            except asyncio.CancelledError:
+                pass
 
         # Stop hardware components
         if self._channel_monitor:

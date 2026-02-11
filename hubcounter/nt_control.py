@@ -45,6 +45,7 @@ class NTController:
         self.led_pattern_pub = hub_table.getIntegerTopic("Led/Pattern").publish()
         self.led_color_pub = hub_table.getStringTopic("Led/Color").publish()
         self.reset_counts_pub = hub_table.getBooleanTopic("ResetCounts").publish()
+        self.pause_counting_pub = hub_table.getBooleanTopic("PauseCounting").publish()
 
         # Create subscribers to read current values
         self.total_count_sub = hub_table.getIntegerTopic("TotalCount").subscribe(0)
@@ -65,6 +66,11 @@ class NTController:
         """Enable/disable external control mode."""
         self.is_external_pub.set(enabled)
         logger.info(f"IsExternal set to: {enabled}")
+
+    def set_pause_counting(self, paused: bool):
+        """Enable/disable pause counting (prevents score incrementing when true)."""
+        self.pause_counting_pub.set(paused)
+        logger.info(f"PauseCounting set to: {paused}")
 
     def set_pattern(self, pattern: int):
         """Set LED pattern.
@@ -119,6 +125,7 @@ class NTController:
         self.led_pattern_pub.close()
         self.led_color_pub.close()
         self.reset_counts_pub.close()
+        self.pause_counting_pub.close()
         self.total_count_sub.close()
         self.channel_counts_sub.close()
         self.reset_counts_sub.close()
@@ -182,6 +189,7 @@ def interactive_mode(controller: NTController):
     print("\n=== Hub Counter NetworkTables Controller ===")
     print("Commands:")
     print("  external on|off       - Enable/disable external control")
+    print("  pause on|off          - Enable/disable pause counting")
     print("  pattern <0-2>         - Set pattern (0=Solid, 1=Blink, 2=Racing)")
     print("  color <r> <g> <b>     - Set RGB color (0-255 each)")
     print("  reset                 - Reset ball counts")
@@ -205,6 +213,13 @@ def interactive_mode(controller: NTController):
                         continue
                     enabled = cmd[1] in ("on", "true", "1")
                     controller.set_external(enabled)
+
+                elif cmd[0] == "pause":
+                    if len(cmd) != 2:
+                        print("Usage: pause on|off")
+                        continue
+                    paused = cmd[1] in ("on", "true", "1")
+                    controller.set_pause_counting(paused)
 
                 elif cmd[0] == "pattern":
                     if len(cmd) != 2:
@@ -270,6 +285,7 @@ def main():
 
     # Command-line options for one-shot commands
     parser.add_argument("--external", choices=["on", "off"], help="Set external control")
+    parser.add_argument("--pause", choices=["on", "off"], help="Set pause counting")
     parser.add_argument("--pattern", type=int, choices=[0, 1, 2], help="Set LED pattern")
     parser.add_argument("--color", nargs=3, type=int, metavar=("R", "G", "B"), help="Set RGB color")
     parser.add_argument("--reset", action="store_true", help="Reset ball counts")
@@ -289,6 +305,7 @@ def main():
     # Check if any one-shot commands were specified
     one_shot = any([
         args.external,
+        args.pause,
         args.pattern is not None,
         args.color,
         args.reset,
@@ -299,6 +316,8 @@ def main():
         # Execute one-shot commands
         if args.external:
             controller.set_external(args.external == "on")
+        if args.pause:
+            controller.set_pause_counting(args.pause == "on")
         if args.pattern is not None:
             controller.set_pattern(args.pattern)
         if args.color:

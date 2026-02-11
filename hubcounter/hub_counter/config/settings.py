@@ -10,16 +10,16 @@ from pydantic import BaseModel, Field
 class GPIOConfig(BaseModel):
     """GPIO configuration."""
 
-    channel_pins: list[int] = Field(default=[17, 27, 22, 23], min_length=4, max_length=4)
+    channel_pins: list[int] = Field(default=[23, 24, 25, 16], min_length=4, max_length=4)
     active_low: bool = True
-    debounce_ms: int = Field(default=50, ge=10, le=500)
+    debounce_ms: int = Field(default=10, ge=10, le=500)
 
 
 class LEDConfig(BaseModel):
     """LED strip configuration."""
 
-    data_pin: int = 18
-    led_count: int = Field(default=6, ge=1, le=100)
+    data_pin: int = 21
+    led_count: int = Field(default=12, ge=1, le=100)
     brightness: int = Field(default=200, ge=0, le=255)
 
 
@@ -42,14 +42,14 @@ class NetworkConfig(BaseModel):
     """NetworkTables configuration."""
 
     team_number: int = Field(default=6328, ge=1, le=9999)
-    robot_address: str = "10.63.28.1"
+    robot_address: str = "10.63.28.2"
 
 
 class WebConfig(BaseModel):
     """Web server configuration."""
 
     host: str = "0.0.0.0"
-    port: int = Field(default=8080, ge=1, le=65535)
+    port: int = Field(default=80, ge=1, le=65535)
 
 
 class Settings(BaseModel):

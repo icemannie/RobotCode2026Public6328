@@ -131,6 +131,59 @@ main {
     margin-top: 0.5rem;
 }
 
+/* External Control Banner */
+.external-banner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.5rem;
+    background: linear-gradient(135deg, #8b5a00, #b37400);
+    border: 2px solid var(--gold);
+    border-radius: 8px;
+    margin-bottom: 2rem;
+    gap: 1rem;
+}
+
+.external-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.external-label {
+    font-size: 1.1rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--gold);
+}
+
+.external-details {
+    font-size: 0.85rem;
+    color: var(--off-white);
+}
+
+.color-swatch {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    vertical-align: middle;
+    margin-left: 4px;
+}
+
+.release-btn {
+    background: var(--gold);
+    color: var(--blue-darkest);
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.release-btn:hover {
+    background: #ffe066;
+}
+
 /* Channel Grid */
 .channel-grid {
     display: grid;

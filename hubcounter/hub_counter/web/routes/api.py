@@ -17,6 +17,7 @@ _nt_client = None
 _led_controller = None
 _settings = None
 _save_settings_fn = None
+_app = None
 _websocket_connections: list[WebSocket] = []
 
 
@@ -50,6 +51,7 @@ class StatusResponse(BaseModel):
     nt_connected: bool
     nt_available: bool
     led_active: bool
+    is_external: bool = False
     match_info: Optional[dict[str, Any]] = None
 
 
@@ -59,6 +61,7 @@ def set_dependencies(
     led_controller,
     settings,
     save_settings_fn,
+    app=None,
 ):
     """Set dependencies for the API routes.
 
@@ -68,13 +71,15 @@ def set_dependencies(
         led_controller: LEDController instance.
         settings: Current Settings instance.
         save_settings_fn: Function to save settings.
+        app: HubCounterApp instance for external control.
     """
-    global _ball_counter, _nt_client, _led_controller, _settings, _save_settings_fn
+    global _ball_counter, _nt_client, _led_controller, _settings, _save_settings_fn, _app
     _ball_counter = ball_counter
     _nt_client = nt_client
     _led_controller = led_controller
     _settings = settings
     _save_settings_fn = save_settings_fn
+    _app = app
 
 
 @router.get("/counts", response_model=CountsResponse)
@@ -206,6 +211,7 @@ async def get_status():
         nt_connected=_nt_client.is_connected if _nt_client else False,
         nt_available=_nt_client.is_available if _nt_client else False,
         led_active=_led_controller.is_active if _led_controller else False,
+        is_external=_app._is_external if _app else False,
         match_info=match_info.to_dict() if match_info else None,
     )
 
@@ -225,8 +231,8 @@ async def simulate_ball(channel: int):
     if _nt_client:
         _nt_client.publish_counts(counts)
 
-    # Trigger LED pulse
-    if _led_controller:
+    # Trigger LED pulse (skip when in external control mode)
+    if _led_controller and not (_app and _app._is_external):
         loop = asyncio.get_event_loop()
         _led_controller.trigger_pulse(counts.total, loop)
 
@@ -238,6 +244,16 @@ async def simulate_ball(channel: int):
         "channel": channel,
         "counts": CountsResponse(channels=counts.channels, total=counts.total),
     }
+
+
+@router.post("/external/dismiss")
+async def dismiss_external():
+    """Dismiss external control mode (local UI override)."""
+    if _app is None:
+        return {"success": False, "error": "App not available"}
+
+    await _app.dismiss_external()
+    return {"success": True}
 
 
 async def broadcast_counts(counts):
@@ -292,6 +308,37 @@ async def broadcast_nt_status(connected: bool):
         _websocket_connections.remove(ws)
 
 
+async def broadcast_external_state(is_external: bool, pattern: str, color: str):
+    """Broadcast external control state to all WebSocket clients.
+
+    Args:
+        is_external: Whether external control is active.
+        pattern: Current pattern name.
+        color: Current color hex string.
+    """
+    if not _websocket_connections:
+        return
+
+    message = {
+        "type": "external_state",
+        "data": {
+            "is_external": is_external,
+            "pattern": pattern,
+            "color": color,
+        },
+    }
+
+    disconnected = []
+    for websocket in _websocket_connections:
+        try:
+            await websocket.send_json(message)
+        except Exception:
+            disconnected.append(websocket)
+
+    for ws in disconnected:
+        _websocket_connections.remove(ws)
+
+
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time updates."""
@@ -309,6 +356,18 @@ async def websocket_endpoint(websocket: WebSocket):
                     "data": {"channels": counts.channels, "total": counts.total},
                 }
             )
+
+        # Send initial external state
+        await websocket.send_json(
+            {
+                "type": "external_state",
+                "data": {
+                    "is_external": _app._is_external if _app else False,
+                    "pattern": "",
+                    "color": "",
+                },
+            }
+        )
 
         # Keep connection alive and handle messages
         while True:

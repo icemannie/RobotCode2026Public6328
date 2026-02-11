@@ -64,8 +64,8 @@ gpio:
   debounce_ms: 10                    # Debounce window in milliseconds
 
 led:
-  data_pin: 26        # GPIO data pin for WS2813 strips
-  led_count: 6        # LEDs per strip (2 strips, 12 total)
+  data_pin: 21        # GPIO data pin for WS2813 strips
+  led_count: 12        # LEDs per strip (2 strips, 12 total)
   brightness: 200     # 0-255
 
 network:
@@ -98,6 +98,63 @@ Once running, open `http://<pi-ip>` in a browser. The dashboard shows:
 - Configuration panel for network, thresholds, and LED colors
 
 Real-time updates are delivered over WebSocket.
+
+## NetworkTables Robot Simulator
+
+The `nt_control.py` script simulates robot control over NetworkTables. Use it to test external LED control without a real robot.
+
+### Interactive Mode
+
+```bash
+# Connect to local hub counter
+./nt_control.py --server localhost
+
+# Available commands:
+> external on          # Enable external control mode
+> pattern 1            # Set pattern (0=Solid, 1=Blink, 2=Racing)
+> color 255 0 0        # Set RGB color (red)
+> reset                # Reset ball counts
+> counts               # Show current counts
+> quit                 # Exit
+```
+
+### One-Shot Commands
+
+```bash
+# Enable external control with red blinking LEDs
+./nt_control.py --server localhost --external on --pattern 1 --color 255 0 0
+
+# Reset counts via NetworkTables
+./nt_control.py --server localhost --reset
+
+# Check current counts
+./nt_control.py --server localhost --counts
+```
+
+### Example: Full External Control Test
+
+```bash
+# Terminal 1: Start hub counter in mock mode
+MOCK_HARDWARE=1 python main.py
+
+# Terminal 2: Simulate robot control
+./nt_control.py --server localhost
+> external on
+> pattern 2            # Racing pattern
+> color 0 255 0        # Green
+```
+
+The hub counter will now display a green racing pattern controlled by NetworkTables, just like it would when connected to a real robot.
+
+### Fancy Demo Mode
+
+Run an automated 30-second demonstration showcasing all patterns and colors:
+
+```bash
+./nt_control.py --server localhost --fancy-demo
+```
+
+The demo automatically cycles through solid colors, blinking patterns, and racing effects with various colors.
 
 ## API
 

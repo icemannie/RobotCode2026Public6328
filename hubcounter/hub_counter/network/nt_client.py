@@ -43,12 +43,20 @@ class NetworkTablesClient:
         self._inst: Optional["ntcore.NetworkTableInstance"] = None
         self._total_count_pub = None
         self._channel_counts_pub = None
+        self._is_external_pub = None
+        self._led_pattern_pub = None
+        self._led_color_pub = None
+        self._reset_counts_pub = None
+        self._pause_counting_pub = None
         self._match_time_sub = None
         self._is_auto_sub = None
         self._is_teleop_sub = None
         self._connected = False
         self._is_external_sub = None
         self._led_pattern_sub = None
+        self._led_color_sub = None
+        self._reset_counts_sub = None
+        self._pause_counting_sub = None
 
         self._monitor_thread: Optional[threading.Thread] = None
         self._stop_monitor = threading.Event()
@@ -99,7 +107,26 @@ class NetworkTablesClient:
         self._channel_counts_pub = hub_table.getIntegerArrayTopic(
             "ChannelCounts"
         ).publish()
-        logger.debug("Publishers created for TotalCount and ChannelCounts")
+
+        # Publish initial counts so topics appear immediately
+        self._total_count_pub.set(0)
+        self._channel_counts_pub.set([0, 0, 0, 0])
+        logger.debug("Publishers created for TotalCount and ChannelCounts with initial values")
+
+        # Create publishers for external control state and publish initial values
+        self._is_external_pub = hub_table.getBooleanTopic("IsExternal").publish()
+        self._led_pattern_pub = hub_table.getIntegerTopic("Led/Pattern").publish()
+        self._led_color_pub = hub_table.getStringTopic("Led/Color").publish()
+        self._reset_counts_pub = hub_table.getBooleanTopic("ResetCounts").publish()
+        self._pause_counting_pub = hub_table.getBooleanTopic("PauseCounting").publish()
+
+        # Publish initial values
+        self._is_external_pub.set(False)
+        self._led_pattern_pub.set(0)
+        self._led_color_pub.set("#000000")
+        self._reset_counts_pub.set(False)
+        self._pause_counting_pub.set(False)
+        logger.debug("Publishers created for external control topics with initial values")
 
         # Subscribe to FMS info for match data
         logger.debug("Setting up FMSInfo table subscribers...")
@@ -107,9 +134,16 @@ class NetworkTablesClient:
         self._match_time_sub = fms_table.getDoubleTopic("MatchTime").subscribe(0.0)
         self._is_auto_sub = fms_table.getBooleanTopic("IsAutonomous").subscribe(False)
         self._is_teleop_sub = fms_table.getBooleanTopic("IsTeleop").subscribe(False)
-        self._is_external_sub = fms_table.getBooleanTopic("IsExternal").subscribe(False)
-        self._led_pattern_sub = fms_table.getIntegerTopic("LedPattern").subscribe(0)
         logger.debug("Subscribers created for FMSInfo topics")
+
+        # Subscribe to HubCounter table for external control
+        logger.debug("Setting up HubCounter table subscribers for external control...")
+        self._is_external_sub = hub_table.getBooleanTopic("IsExternal").subscribe(False)
+        self._led_pattern_sub = hub_table.getIntegerTopic("Led/Pattern").subscribe(0)
+        self._led_color_sub = hub_table.getStringTopic("Led/Color").subscribe("#000000")
+        self._reset_counts_sub = hub_table.getBooleanTopic("ResetCounts").subscribe(False)
+        self._pause_counting_sub = hub_table.getBooleanTopic("PauseCounting").subscribe(False)
+        logger.debug("Subscribers created for HubCounter external control topics")
 
         # Add connection listener
         logger.debug("Adding connection listener...")
@@ -147,6 +181,16 @@ class NetworkTablesClient:
             self._total_count_pub.close()
         if self._channel_counts_pub:
             self._channel_counts_pub.close()
+        if self._is_external_pub:
+            self._is_external_pub.close()
+        if self._led_pattern_pub:
+            self._led_pattern_pub.close()
+        if self._led_color_pub:
+            self._led_color_pub.close()
+        if self._reset_counts_pub:
+            self._reset_counts_pub.close()
+        if self._pause_counting_pub:
+            self._pause_counting_pub.close()
 
         # Close subscribers
         if self._match_time_sub:
@@ -159,6 +203,12 @@ class NetworkTablesClient:
             self._is_external_sub.close()
         if self._led_pattern_sub:
             self._led_pattern_sub.close()
+        if self._led_color_sub:
+            self._led_color_sub.close()
+        if self._reset_counts_sub:
+            self._reset_counts_sub.close()
+        if self._pause_counting_sub:
+            self._pause_counting_sub.close()
 
         self._inst.stopClient()
         self._connected = False
@@ -286,6 +336,55 @@ class NetworkTablesClient:
                 self.start()
 
             logger.info(f"Network config updated: team={config.team_number}")
+
+    def get_external_state(self) -> dict:
+        """Get current external control state from NetworkTables.
+
+        Returns:
+            Dict with is_external, led_pattern, led_color (hex string), and pause_counting.
+        """
+        if not NT_AVAILABLE or not self._inst:
+            return {"is_external": False, "led_pattern": 0, "led_color": "#000000", "pause_counting": False}
+
+        try:
+            is_external = self._is_external_sub.get() if self._is_external_sub else False
+            led_pattern = self._led_pattern_sub.get() if self._led_pattern_sub else 0
+            led_color = self._led_color_sub.get() if self._led_color_sub else "#000000"
+            pause_counting = self._pause_counting_sub.get() if self._pause_counting_sub else False
+            return {
+                "is_external": is_external,
+                "led_pattern": led_pattern,
+                "led_color": led_color,
+                "pause_counting": pause_counting,
+            }
+        except Exception as e:
+            logger.error(f"Error getting external state: {e}")
+            return {"is_external": False, "led_pattern": 0, "led_color": "#000000", "pause_counting": False}
+
+    def get_reset_requested(self) -> bool:
+        """Check if a reset has been requested.
+
+        Returns True if ResetCounts is currently true.
+        """
+        if not NT_AVAILABLE or not self._inst or not self._reset_counts_sub:
+            return False
+
+        try:
+            return self._reset_counts_sub.get()
+        except Exception as e:
+            logger.error(f"Error checking reset request: {e}")
+            return False
+
+    def acknowledge_reset(self) -> None:
+        """Acknowledge a reset by setting ResetCounts back to false."""
+        if not NT_AVAILABLE or not self._inst or not self._reset_counts_pub:
+            return
+
+        try:
+            self._reset_counts_pub.set(False)
+            logger.debug("Reset acknowledged (set ResetCounts to false)")
+        except Exception as e:
+            logger.error(f"Error acknowledging reset: {e}")
 
     @property
     def is_connected(self) -> bool:

@@ -210,6 +210,161 @@ class LEDController:
 
         self._clear()
 
+    def set_solid(self, color: tuple[int, int, int]) -> None:
+        """Set all LEDs to a solid color.
+
+        Args:
+            color: RGB color tuple.
+        """
+        if not self._strip or not self._active:
+            return
+
+        r, g, b = color
+        for i in range(self._strip.numPixels()):
+            self._strip.setPixelColor(i, Color(r, g, b))
+        self._strip.show()
+        logger.debug(f"Set solid color: ({r}, {g}, {b})")
+
+    def set_blink(self, color: tuple[int, int, int], loop: asyncio.AbstractEventLoop) -> None:
+        """Start a blinking pattern (500ms on, 500ms off).
+
+        Args:
+            color: RGB color tuple.
+            loop: Asyncio event loop.
+        """
+        self.stop_pattern()
+        self._pulse_task = asyncio.run_coroutine_threadsafe(
+            self._blink_loop(color), loop
+        )
+        logger.debug(f"Started blink pattern with color {color}")
+
+    def set_racing(self, color: tuple[int, int, int], loop: asyncio.AbstractEventLoop) -> None:
+        """Start a KITT-style racing/scanner pattern.
+
+        Args:
+            color: RGB color tuple.
+            loop: Asyncio event loop.
+        """
+        self.stop_pattern()
+        self._pulse_task = asyncio.run_coroutine_threadsafe(
+            self._racing_loop(color), loop
+        )
+        logger.debug(f"Started racing pattern with color {color}")
+
+    def stop_pattern(self) -> None:
+        """Cancel any running pattern task and clear LEDs."""
+        if self._pulse_task and not self._pulse_task.done():
+            self._pulse_task.cancel()
+            self._pulse_task = None
+        self._clear()
+
+    async def _blink_loop(self, color: tuple[int, int, int]) -> None:
+        """Async loop for pulsing/fading pattern.
+
+        Args:
+            color: RGB color tuple.
+        """
+        r, g, b = color
+        num_leds = self._strip.numPixels() if self._strip else 0
+        steps = 20
+        step_delay = 0.5 / steps  # 0.5 seconds for fade in, 0.5 for fade out
+
+        try:
+            while True:
+                if not self._strip or not self._active:
+                    return
+
+                # Fade in
+                for step in range(steps):
+                    brightness = step / steps
+                    scaled_r = int(r * brightness)
+                    scaled_g = int(g * brightness)
+                    scaled_b = int(b * brightness)
+
+                    for i in range(num_leds):
+                        self._strip.setPixelColor(i, Color(scaled_r, scaled_g, scaled_b))
+                    self._strip.show()
+                    await asyncio.sleep(step_delay)
+
+                # Fade out
+                for step in range(steps, 0, -1):
+                    brightness = step / steps
+                    scaled_r = int(r * brightness)
+                    scaled_g = int(g * brightness)
+                    scaled_b = int(b * brightness)
+
+                    for i in range(num_leds):
+                        self._strip.setPixelColor(i, Color(scaled_r, scaled_g, scaled_b))
+                    self._strip.show()
+                    await asyncio.sleep(step_delay)
+
+        except asyncio.CancelledError:
+            pass
+
+    async def _racing_loop(self, color: tuple[int, int, int]) -> None:
+        """Async loop for KITT-style racing/scanner pattern on solid background.
+
+        A white LED sweeps back and forth with a trailing fade on a solid background.
+
+        Args:
+            color: RGB color tuple for the solid background LED.
+        """
+        r, g, b = color
+        num_leds = self._strip.numPixels() if self._strip else 0
+        if num_leds == 0:
+            return
+
+        trail_brightness = [1.0, 0.4, 0.15]  # head + 2 trailing LEDs
+        step_delay = 0.04  # 40ms per step for smooth animation
+        racing_white_brightness = 90  # Dimmed white foreground
+
+        try:
+            while True:
+                # Forward sweep
+                for pos in range(num_leds):
+                    if not self._strip or not self._active:
+                        return
+                    # Set rgb background
+                    for i in range(num_leds):
+                        self._strip.setPixelColor(i, Color(r, g, b))
+                    # Draw white racing pattern on top
+                    for t, brightness in enumerate(trail_brightness):
+                        idx = pos - t
+                        if 0 <= idx < num_leds:
+                            self._strip.setPixelColor(
+                                idx,
+                                Color(
+                                    int(racing_white_brightness * brightness),
+                                    int(racing_white_brightness * brightness),
+                                    int(racing_white_brightness * brightness),
+                                ),
+                            )
+                    self._strip.show()
+                    await asyncio.sleep(step_delay)
+                # Reverse sweep
+                for pos in range(num_leds - 1, -1, -1):
+                    if not self._strip or not self._active:
+                        return
+                    # Set white background
+                    for i in range(num_leds):
+                        self._strip.setPixelColor(i, Color(r, g, b))
+                    # Draw colored racing pattern on top
+                    for t, brightness in enumerate(trail_brightness):
+                        idx = pos + t
+                        if 0 <= idx < num_leds:
+                            self._strip.setPixelColor(
+                                idx,
+                                Color(
+                                    int(racing_white_brightness * brightness),
+                                    int(racing_white_brightness * brightness),
+                                    int(racing_white_brightness * brightness),
+                                ),
+                            )
+                    self._strip.show()
+                    await asyncio.sleep(step_delay)
+        except asyncio.CancelledError:
+            pass
+
     def trigger_pulse(self, total_count: int, loop: asyncio.AbstractEventLoop) -> None:
         """Trigger a pulse based on current ball count.
 

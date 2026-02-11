@@ -8,6 +8,7 @@ class HubCounterApp {
         this.ws = null;
         this.reconnectInterval = null;
         this.previousTotal = 0;
+        this.isExternal = false;
         this.config = {
             thresholds: { yellow: 100, blue: 360 },
             colors: {
@@ -23,6 +24,7 @@ class HubCounterApp {
     init() {
         this.bindNavigation();
         this.bindDashboard();
+        this.bindExternalControl();
         this.bindConfig();
         this.setupConfettiCanvas();
         this.loadConfig();
@@ -245,6 +247,45 @@ class HubCounterApp {
         });
     }
 
+    // External Control
+    bindExternalControl() {
+        document.getElementById('release-control-btn').addEventListener('click', () => {
+            this.dismissExternal();
+        });
+    }
+
+    async dismissExternal() {
+        try {
+            const response = await fetch('/api/external/dismiss', { method: 'POST' });
+            const data = await response.json();
+            if (data.success) {
+                this.showToast('External control released', 'success');
+            }
+        } catch (error) {
+            console.error('Dismiss external error:', error);
+            this.showToast('Failed to release control', 'error');
+        }
+    }
+
+    updateExternalState(data) {
+        this.isExternal = data.is_external;
+        const banner = document.getElementById('external-banner');
+        if (data.is_external) {
+            document.getElementById('external-pattern').textContent = data.pattern || '-';
+            document.getElementById('external-color-text').textContent = data.color || '-';
+            const swatch = document.getElementById('external-color-swatch');
+            if (data.color) {
+                swatch.style.backgroundColor = data.color;
+                swatch.style.display = 'inline-block';
+            } else {
+                swatch.style.display = 'none';
+            }
+            banner.style.display = 'flex';
+        } else {
+            banner.style.display = 'none';
+        }
+    }
+
     updateCounts(counts) {
         const { channels, total } = counts;
 
@@ -438,6 +479,11 @@ class HubCounterApp {
 
             this.updateCounts(status.counts);
             this.updateNTStatus(status.nt_connected);
+            this.updateExternalState({
+                is_external: status.is_external || false,
+                pattern: '',
+                color: '',
+            });
         } catch (error) {
             console.error('Load status error:', error);
         }
@@ -512,6 +558,9 @@ class HubCounterApp {
                 if (message.data.nt_connected !== undefined) {
                     this.updateNTStatus(message.data.nt_connected);
                 }
+                break;
+            case 'external_state':
+                this.updateExternalState(message.data);
                 break;
             default:
                 console.log('Unknown WS message type:', message.type);

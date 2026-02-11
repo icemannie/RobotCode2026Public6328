@@ -17,6 +17,7 @@ class EventType(Enum):
     CONFIG_UPDATED = auto()  # Payload: Settings
     NT_CONNECTED = auto()  # Payload: {"connected": bool}
     MATCH_INFO_UPDATED = auto()  # Payload: MatchInfo
+    EXTERNAL_STATE_CHANGED = auto()  # Payload: {"is_external": bool, "pattern": int, "color": str}
 
 
 # Type alias for event handlers

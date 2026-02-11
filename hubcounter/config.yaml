@@ -21,7 +21,7 @@ gpio:
   debounce_ms: 10
 led:
   brightness: 200
-  data_pin: 26
+  data_pin: 21
   led_count: 6
 network:
   robot_address: 10.63.28.2
