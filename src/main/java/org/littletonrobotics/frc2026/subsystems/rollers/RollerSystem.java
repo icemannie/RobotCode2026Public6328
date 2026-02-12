@@ -31,7 +31,10 @@ public class RollerSystem {
 
   private final Debouncer motorConnectedDebouncer =
       new Debouncer(0.5, Debouncer.DebounceType.kFalling);
+  private final Debouncer followerMotorConnectedDebouncer =
+      new Debouncer(0.5, Debouncer.DebounceType.kFalling);
   private final Alert disconnected;
+  private final Alert followerDisconnected;
 
   public RollerSystem(String name, String inputsName, RollerSystemIO io, double kP, double kD) {
     this.name = name;
@@ -39,6 +42,8 @@ public class RollerSystem {
     this.io = io;
 
     disconnected = new Alert(name + " motor disconnected!", Alert.AlertType.kWarning);
+    followerDisconnected =
+        new Alert(name + " follower motor disconnected!", Alert.AlertType.kWarning);
     outputs.kP = kP;
     outputs.kD = kD;
   }
@@ -49,6 +54,8 @@ public class RollerSystem {
     this.io = io;
 
     disconnected = new Alert(name + " motor disconnected!", Alert.AlertType.kWarning);
+    followerDisconnected =
+        new Alert(name + " follower motor disconnected!", Alert.AlertType.kWarning);
   }
 
   public void periodic() {
@@ -57,6 +64,10 @@ public class RollerSystem {
     Logger.processInputs(inputsName, inputs);
     disconnected.set(
         Robot.showHardwareAlerts() && !motorConnectedDebouncer.calculate(inputs.connected));
+    followerDisconnected.set(
+        Robot.showHardwareAlerts()
+            && inputs.hasFollower
+            && !followerMotorConnectedDebouncer.calculate(inputs.followerConnected));
 
     // Update mode
     if (DriverStation.isDisabled()) {

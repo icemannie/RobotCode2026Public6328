@@ -11,9 +11,8 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform3d;
 
 public class LauncherConstants {
-  // TODO: update this from double launcher CAD
   public static Transform3d robotToLauncher =
-      new Transform3d(-0.19685, 0.0, 0.44, Rotation3d.kZero);
+      new Transform3d(-0.276, 0.09, 0.599, new Rotation3d(0.0, 0.0, Math.PI));
 
   private LauncherConstants() {}
 }

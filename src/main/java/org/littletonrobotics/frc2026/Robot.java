@@ -233,7 +233,7 @@ public class Robot extends LoggedRobot {
     robotContainer.updateDashboardOutputs();
 
     // Log Mechanism3d data
-    AlphaMechanism3d.getMeasured().log("Mechanism3d/Alpha");
+    CompBotMechanism3d.getMeasured().log("Mechanism3d");
 
     // Log hub state
     Logger.recordOutput("HubShift", HubShiftUtil.getShiftInfo());
