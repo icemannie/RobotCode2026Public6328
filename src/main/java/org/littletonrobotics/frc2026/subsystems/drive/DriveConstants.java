@@ -15,23 +15,28 @@ import org.littletonrobotics.frc2026.Constants.RobotType;
 public class DriveConstants {
   // MARK: - COMPBOT Constants
 
-  public static final double compbotTrackWidthXInches = 20.75;
-  public static final double compbotTrackWidthYInches = 20.75;
-  public static final double compbotFullWidthXInches = 34.65;
-  public static final double compbotFullWidthYInches = 33.65;
-  public static final double compbotMaxLinearSpeed = 4.69;
+  public static final double compbotTrackWidthXInches = 21.25;
+  public static final double compbotTrackWidthYInches = 22.25;
+  public static final double compbotFullWidthXInches = 34.5;
+  public static final double compbotFullWidthYInches = 35.5;
+  public static final double compbotMaxLinearSpeed = 4.2; // Theoretical max is 4.4196
   public static final double compbotMaxTrajectoryLinearSpeed = 4.0;
-  public static final double compbotMaxAngularSpeed = 6.46; // maxLinearSpeed / driveBaseRadius
+  public static final double compbotMaxAngularSpeed =
+      5.374; // maxLinearSpeed / driveBaseRadius (0.7814886979 meters)
   public static final double compbotWheelRadiusInches = 2.0;
   public static final double compbotTrajectoryWheelRadiusInches = 2.0;
-  public static final double compbotMaxTrajectoryWheelTorque = 3.0; // N * m
-  public static final double compbotMassLbs = 125.0;
+  public static final double compbotMaxTrajectoryWheelTorque = 4.0; // N * m
+  public static final double compbotMassLbs = 150.0;
   public static final double compbotWheelCOF = 1.5;
   public static final double compbotRotationMOI = 6.0; // kg * m^2
 
-  // SDS MK5i modules, R2 reduction
-  public static final double compbotDriveReduction = 6.02678571429;
-  public static final double compbotTurnReduction = 26.0;
+  // SDS MK5i modules, R1 reduction
+  public static final double compbotDriveReduction = 7.03125;
+  public static final double compbotTurnReductionFL = 26.0;
+  public static final double compbotTurnReductionFR = 26.0;
+  public static final double compbotTurnReductionBL = 26.0;
+  public static final double compbotTurnReductionBR = 26.0;
+  // public static final double compbotTurnReductionBR = 26.09090909091; // MK5n
 
   public static final String compbotCanBus = "*";
   public static final int compbotGyroId = 1;
@@ -67,13 +72,16 @@ public class DriveConstants {
   public static final double alphabotWheelRadiusInches = 2.0;
   public static final double alphabotTrajectoryWheelRadiusInches = 2.0;
   public static final double alphabotMaxTrajectoryWheelTorque = 3.0; // N * m
-  public static final double alphabotMassLbs = 125.0;
+  public static final double alphabotMassLbs = 140.0;
   public static final double alphabotWheelCOF = 1.5;
   public static final double alphabotRotationMOI = 6.0; // kg * m^2
 
   // SDS MK4i modules, L3 reduction
   public static final double alphabotDriveReduction = 6.1224489796;
-  public static final double alphabotTurnReduction = 21.4285714286;
+  public static final double alphabotTurnReductionFL = 21.4285714286;
+  public static final double alphabotTurnReductionFR = 21.4285714286;
+  public static final double alphabotTurnReductionBL = 21.4285714286;
+  public static final double alphabotTurnReductionBR = 21.4285714286;
 
   public static final String alphabotCanBus = "*";
   public static final int alphabotGyroId = 1;
@@ -167,6 +175,12 @@ public class DriveConstants {
 
   public static final double driveReduction =
       Constants.robot == RobotType.ALPHABOT ? compbotDriveReduction : alphabotDriveReduction;
-  public static final double turnReduction =
-      Constants.robot == RobotType.ALPHABOT ? compbotTurnReduction : alphabotTurnReduction;
+  public static final double turnReductionFL =
+      Constants.robot == RobotType.ALPHABOT ? compbotTurnReductionFL : alphabotTurnReductionFL;
+  public static final double turnReductionFR =
+      Constants.robot == RobotType.ALPHABOT ? compbotTurnReductionFR : alphabotTurnReductionFR;
+  public static final double turnReductionBL =
+      Constants.robot == RobotType.ALPHABOT ? compbotTurnReductionBL : alphabotTurnReductionBL;
+  public static final double turnReductionBR =
+      Constants.robot == RobotType.ALPHABOT ? compbotTurnReductionBR : alphabotTurnReductionBR;
 }

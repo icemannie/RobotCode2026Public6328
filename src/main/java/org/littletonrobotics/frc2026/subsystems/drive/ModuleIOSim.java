@@ -27,10 +27,7 @@ public class ModuleIOSim implements ModuleIO {
       new DCMotorSim(
           LinearSystemId.createDCMotorSystem(driveMotorModel, 0.025, DriveConstants.driveReduction),
           driveMotorModel);
-  private final DCMotorSim turnSim =
-      new DCMotorSim(
-          LinearSystemId.createDCMotorSystem(turnMotorModel, 0.004, DriveConstants.turnReduction),
-          turnMotorModel);
+  private final DCMotorSim turnSim;
 
   private boolean driveClosedLoop = false;
   private boolean turnClosedLoop = false;
@@ -40,9 +37,24 @@ public class ModuleIOSim implements ModuleIO {
   private double driveAppliedVolts = 0.0;
   private double turnAppliedVolts = 0.0;
 
-  public ModuleIOSim() {
+  public ModuleIOSim(int index) {
     // Enable wrapping for turn PID
     turnController.enableContinuousInput(-Math.PI, Math.PI);
+
+    // Set up turn sim (depends on index for correct reduction)
+    turnSim =
+        new DCMotorSim(
+            LinearSystemId.createDCMotorSystem(
+                turnMotorModel,
+                0.004,
+                switch (index) {
+                  case 0 -> DriveConstants.turnReductionFL;
+                  case 1 -> DriveConstants.turnReductionFR;
+                  case 2 -> DriveConstants.turnReductionBL;
+                  case 3 -> DriveConstants.turnReductionBR;
+                  default -> throw new IllegalArgumentException("Invalid module index: " + index);
+                }),
+            turnMotorModel);
   }
 
   @Override
