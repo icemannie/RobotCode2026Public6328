@@ -204,9 +204,8 @@ class PylonCapture(Capture):
                     self._camera.GetNodeMap().GetNode("OffsetX").SetValue(168)
                     self._camera.GetNodeMap().GetNode("OffsetY").SetValue(8)
 
-                if self._is_flipped:
-                    self._camera.GetNodeMap().GetNode("ReverseX").SetValue(True)
-                    self._camera.GetNodeMap().GetNode("ReverseY").SetValue(True)
+                self._camera.GetNodeMap().GetNode("ReverseX").SetValue(self._is_flipped)
+                self._camera.GetNodeMap().GetNode("ReverseY").SetValue(self._is_flipped)
 
                 self._camera.StartGrabbing(pylon.GrabStrategy_LatestImages)
                 print("Capture session ready")

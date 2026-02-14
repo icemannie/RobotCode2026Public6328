@@ -174,13 +174,13 @@ public class DriveConstants {
   };
 
   public static final double driveReduction =
-      Constants.robot == RobotType.ALPHABOT ? compbotDriveReduction : alphabotDriveReduction;
+      Constants.robot == RobotType.ALPHABOT ? alphabotDriveReduction : compbotDriveReduction;
   public static final double turnReductionFL =
-      Constants.robot == RobotType.ALPHABOT ? compbotTurnReductionFL : alphabotTurnReductionFL;
+      Constants.robot == RobotType.ALPHABOT ? alphabotTurnReductionFL : compbotTurnReductionFL;
   public static final double turnReductionFR =
-      Constants.robot == RobotType.ALPHABOT ? compbotTurnReductionFR : alphabotTurnReductionFR;
+      Constants.robot == RobotType.ALPHABOT ? alphabotTurnReductionFR : compbotTurnReductionFR;
   public static final double turnReductionBL =
-      Constants.robot == RobotType.ALPHABOT ? compbotTurnReductionBL : alphabotTurnReductionBL;
+      Constants.robot == RobotType.ALPHABOT ? alphabotTurnReductionBL : compbotTurnReductionBL;
   public static final double turnReductionBR =
-      Constants.robot == RobotType.ALPHABOT ? compbotTurnReductionBR : alphabotTurnReductionBR;
+      Constants.robot == RobotType.ALPHABOT ? alphabotTurnReductionBR : compbotTurnReductionBR;
 }
