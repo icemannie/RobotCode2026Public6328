@@ -8,6 +8,7 @@
 package org.littletonrobotics.frc2026;
 
 import choreo.Choreo;
+import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.util.Units;
@@ -35,6 +36,7 @@ import org.littletonrobotics.frc2026.subsystems.drive.ModuleIOSim;
 import org.littletonrobotics.frc2026.subsystems.hopper.Hopper;
 import org.littletonrobotics.frc2026.subsystems.intake.Intake;
 import org.littletonrobotics.frc2026.subsystems.kicker.Kicker;
+import org.littletonrobotics.frc2026.subsystems.launcher.LaunchCalculator;
 import org.littletonrobotics.frc2026.subsystems.launcher.flywheel.Flywheel;
 import org.littletonrobotics.frc2026.subsystems.launcher.flywheel.FlywheelIO;
 import org.littletonrobotics.frc2026.subsystems.launcher.hood.Hood;
@@ -142,7 +144,6 @@ public class RobotContainer {
     if (kicker == null) {
       kicker = new Kicker(new RollerSystemIO() {}, new RollerSystemIO() {});
     }
-
     if (vision == null) {
       switch (Constants.robot) {
         case COMPBOT -> vision = new Vision(this::getSelectedAprilTagLayout);
@@ -223,12 +224,13 @@ public class RobotContainer {
                         () -> Units.degreesToRadians(presetHoodAngleDegrees.get()), () -> 0.0)));
     primary
         .rightBumper()
-        // .whileTrue(DriveCommands.joystickDriveWhileLaunching(drive, driverX, driverY))
-        // .and(() -> LaunchCalculator.getInstance().getParameters().isValid())
+        .whileTrue(DriveCommands.joystickDriveWhileLaunching(drive, driverX, driverY))
+        .and(() -> LaunchCalculator.getInstance().getParameters().isValid())
         // .and(hood::atGoal)
         // .and(leftFlywheel::atGoal)
         // .and(rightFlywheel::atGoal)
-        // .and(() -> DriveCommands.atLaunchGoal())
+        .and(() -> DriveCommands.atLaunchGoal())
+        .debounce(0.1, DebounceType.kRising)
         .whileTrue(
             Commands.parallel(
                 Commands.startEnd(

@@ -48,7 +48,7 @@ public class Flywheel extends FullSubsystem {
       new Debouncer(torqueCurrentControlDebounce.get(), DebounceType.kFalling);
   private Debouncer atGoalDebouncer = new Debouncer(atGoalDebounce.get(), DebounceType.kFalling);
   private boolean lastTorqueCurrentControl = false;
-  @AutoLogOutput private long lanchCount = 0;
+  @AutoLogOutput private long launchCount = 0;
 
   @Getter
   @Accessors(fluent = true)
@@ -102,7 +102,7 @@ public class Flywheel extends FullSubsystem {
     atGoal = atGoalDebouncer.calculate(inTolerance);
 
     if (!torqueCurrentControl && lastTorqueCurrentControl) {
-      lanchCount++;
+      launchCount++;
     }
     lastTorqueCurrentControl = torqueCurrentControl;
 

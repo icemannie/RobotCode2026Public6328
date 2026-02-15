@@ -91,6 +91,27 @@ public class RobotState {
     return ChassisSpeeds.fromRobotRelativeSpeeds(robotVelocity, getRotation());
   }
 
+  /** Returns the estimated pose of the intake. */
+  public Pose2d getIntakePose() {
+    return estimatedPose.transformBy(
+        new Translation2d(DriveConstants.intakeOffsetX, 0.0).toTransform2d());
+  }
+
+  /** Returns the field-relative velocity of the intake. */
+  public ChassisSpeeds getIntakeFieldVelocity() {
+    var robotVelocity = getFieldVelocity();
+    return new ChassisSpeeds(
+        robotVelocity.vxMetersPerSecond
+            - DriveConstants.intakeOffsetX
+                * getRotation().getSin()
+                * robotVelocity.omegaRadiansPerSecond,
+        robotVelocity.vyMetersPerSecond
+            + DriveConstants.intakeOffsetX
+                * getRotation().getCos()
+                * robotVelocity.omegaRadiansPerSecond,
+        robotVelocity.omegaRadiansPerSecond);
+  }
+
   /** Adds a new odometry sample from the drive subsystem. */
   public void addOdometryObservation(OdometryObservation observation) {
     // Update odometry pose

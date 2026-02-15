@@ -48,7 +48,7 @@ public class VisionConstants {
                                     Units.degreesToRadians(-152.5))));
                       })
                   .id("40530395")
-                  .width(1600)
+                  .width(1800)
                   .height(1200)
                   .exposure(monoExposure)
                   .gain(monoGain)

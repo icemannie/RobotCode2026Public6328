@@ -48,6 +48,18 @@ public class AllianceFlipUtil {
     return new Pose3d(apply(pose.getTranslation()), apply(pose.getRotation()));
   }
 
+  public static Bounds apply(Bounds bounds) {
+    if (shouldFlip()) {
+      return new Bounds(
+          applyX(bounds.maxX()),
+          applyX(bounds.minX()),
+          applyY(bounds.maxY()),
+          applyY(bounds.minY()));
+    } else {
+      return bounds;
+    }
+  }
+
   public static boolean shouldFlip() {
     return !Constants.disableHAL
         && DriverStation.getAlliance().isPresent()

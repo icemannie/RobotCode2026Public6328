@@ -226,9 +226,6 @@ public class Robot extends LoggedRobot {
       Leds.getGlobal().lowBatteryAlert = true;
     }
 
-    // Clear launching parameters
-    LaunchCalculator.getInstance().clearLaunchingParameters();
-
     // Update RobotContainer dashboard outputs
     robotContainer.updateDashboardOutputs();
 
@@ -236,7 +233,15 @@ public class Robot extends LoggedRobot {
     CompBotMechanism3d.getMeasured().log("Mechanism3d");
 
     // Log hub state
-    Logger.recordOutput("HubShift", HubShiftUtil.getShiftInfo());
+    Logger.recordOutput("HubShift/Official", HubShiftUtil.getOfficialShiftInfo());
+    Logger.recordOutput("HubShift/Shifted", HubShiftUtil.getShiftedShiftInfo());
+
+    // Log launching parameters
+    Logger.recordOutput(
+        "LaunchCalculator/Parameters", LaunchCalculator.getInstance().getParameters());
+
+    // Clear launching parameters
+    LaunchCalculator.getInstance().clearLaunchingParameters();
 
     // Record cycle time
     LoggedTracer.record("Robot/Periodic");

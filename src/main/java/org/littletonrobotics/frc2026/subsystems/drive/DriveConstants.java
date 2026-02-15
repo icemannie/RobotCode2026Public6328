@@ -23,7 +23,7 @@ public class DriveConstants {
   public static final double compbotMaxTrajectoryLinearSpeed = 4.0;
   public static final double compbotMaxAngularSpeed =
       5.374; // maxLinearSpeed / driveBaseRadius (0.7814886979 meters)
-  public static final double compbotWheelRadiusInches = 2.0;
+  public static final double compbotWheelRadiusInches = 1.99588001;
   public static final double compbotTrajectoryWheelRadiusInches = 2.0;
   public static final double compbotMaxTrajectoryWheelTorque = 4.0; // N * m
   public static final double compbotMassLbs = 150.0;
@@ -39,26 +39,26 @@ public class DriveConstants {
   // public static final double compbotTurnReductionBR = 26.09090909091; // MK5n
 
   public static final String compbotCanBus = "*";
-  public static final int compbotGyroId = 1;
-  public static final int compbotDriveMotorIdFL = 2;
-  public static final int compbotDriveMotorIdFR = 3;
-  public static final int compbotDriveMotorIdBL = 4;
-  public static final int compbotDriveMotorIdBR = 5;
+  public static final int compbotGyroId = 30;
+  public static final int compbotDriveMotorIdFL = 11;
+  public static final int compbotDriveMotorIdFR = 13;
+  public static final int compbotDriveMotorIdBL = 0;
+  public static final int compbotDriveMotorIdBR = 23;
 
-  public static final int compbotTurnMotorIdFL = 6;
-  public static final int compbotTurnMotorIdFR = 7;
-  public static final int compbotTurnMotorIdBL = 8;
-  public static final int compbotTurnMotorIdBR = 9;
+  public static final int compbotTurnMotorIdFL = 10;
+  public static final int compbotTurnMotorIdFR = 12;
+  public static final int compbotTurnMotorIdBL = 1;
+  public static final int compbotTurnMotorIdBR = 22;
 
-  public static final int compbotEncoderIdFL = 41;
-  public static final int compbotEncoderIdFR = 42;
-  public static final int compbotEncoderIdBL = 43;
-  public static final int compbotEncoderIdBR = 44;
+  public static final int compbotEncoderIdFL = 40;
+  public static final int compbotEncoderIdFR = 41;
+  public static final int compbotEncoderIdBL = 42;
+  public static final int compbotEncoderIdBR = 43;
 
-  public static final double compbotEncoderOffsetFL = 0.0;
-  public static final double compbotEncoderOffsetFR = 0.0;
-  public static final double compbotEncoderOffsetBL = 0.0;
-  public static final double compbotEncoderOffsetBR = 0.0;
+  public static final double compbotEncoderOffsetFL = -1.530913;
+  public static final double compbotEncoderOffsetFR = 2.078544;
+  public static final double compbotEncoderOffsetBL = -2.42369;
+  public static final double compbotEncoderOffsetBR = -2.863942;
 
   // MARK: - ALPHABOT Constants
 
@@ -183,4 +183,7 @@ public class DriveConstants {
       Constants.robot == RobotType.ALPHABOT ? alphabotTurnReductionBL : compbotTurnReductionBL;
   public static final double turnReductionBR =
       Constants.robot == RobotType.ALPHABOT ? alphabotTurnReductionBR : compbotTurnReductionBR;
+
+  public static final double intakeOffsetX = fullWidthX / 2.0 + Units.inchesToMeters(4.0);
+  public static final double intakeWidth = Units.inchesToMeters(27.0);
 }

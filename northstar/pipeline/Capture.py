@@ -198,8 +198,15 @@ class PylonCapture(Capture):
                     self._converter.OutputPixelFormat = pylon.PixelType_RGB8packed
                     self._converter.OutputBitAlignment = pylon.OutputBitAlignment_MsbAligned
 
+                    # Disable auto white balance
+                    self._camera.GetNodeMap().GetNode("BalanceWhiteAuto").SetValue("Off")
+                    self._camera.BalanceRatioSelector.SetValue("Red")
+                    self._camera.BalanceRatio.SetValue(1.2)
+                    self._camera.BalanceRatioSelector.SetValue("Blue")
+                    self._camera.BalanceRatio.SetValue(1.2)
+
                 elif self._mode == "cropped":
-                    self._camera.GetNodeMap().GetNode("Width").SetValue(1600)
+                    self._camera.GetNodeMap().GetNode("Width").SetValue(1800)
                     self._camera.GetNodeMap().GetNode("Height").SetValue(1200)
                     self._camera.GetNodeMap().GetNode("OffsetX").SetValue(168)
                     self._camera.GetNodeMap().GetNode("OffsetY").SetValue(8)

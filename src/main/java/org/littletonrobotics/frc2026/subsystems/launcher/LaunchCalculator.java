@@ -18,7 +18,6 @@ import edu.wpi.first.math.interpolation.InterpolatingDoubleTreeMap;
 import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
 import edu.wpi.first.math.interpolation.InverseInterpolator;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
-import edu.wpi.first.math.util.Units;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.frc2026.Constants;
 import org.littletonrobotics.frc2026.FieldConstants;
@@ -33,9 +32,8 @@ public class LaunchCalculator {
 
   private final LinearFilter hoodAngleFilter =
       LinearFilter.movingAverage((int) (0.1 / Constants.loopPeriodSecs));
-
   private final LinearFilter driveAngleFilter =
-      LinearFilter.movingAverage((int) (0.1 / Constants.loopPeriodSecs));
+      LinearFilter.movingAverage((int) (0.8 / Constants.loopPeriodSecs));
 
   private double lastHoodAngle;
   private Rotation2d lastDriveAngle;
@@ -48,17 +46,20 @@ public class LaunchCalculator {
   public record LaunchingParameters(
       boolean isValid,
       Rotation2d driveAngle,
+      Rotation2d driveAngleNoLookahead,
       double driveVelocity,
       double hoodAngle,
       double hoodVelocity,
-      double flywheelSpeed) {}
+      double flywheelSpeed,
+      double distance,
+      double distanceNoLookahead,
+      double timeOfFlight) {}
 
   // Cache parameters
   private LaunchingParameters latestParameters = null;
 
   private static double minDistance;
   private static double maxDistance;
-  private static double maxDistanceForReverseLaunch;
   private static double phaseDelay;
   private static final InterpolatingTreeMap<Double, Rotation2d> hoodAngleMap =
       new InterpolatingTreeMap<>(InverseInterpolator.forDouble(), Rotation2d::interpolate);
@@ -70,8 +71,6 @@ public class LaunchCalculator {
   static {
     minDistance = 1.34;
     maxDistance = 5.60;
-    // TODO: find a real value for this
-    maxDistanceForReverseLaunch = 2.0;
     phaseDelay = 0.03;
 
     hoodAngleMap.put(1.34, Rotation2d.fromDegrees(19.0));
@@ -101,6 +100,14 @@ public class LaunchCalculator {
     timeOfFlightMap.put(3.15, 1.11);
     timeOfFlightMap.put(1.88, 1.09);
     timeOfFlightMap.put(1.38, 0.90);
+  }
+
+  public static double getMinTimeOfFlight() {
+    return timeOfFlightMap.get(minDistance);
+  }
+
+  public static double getMaxTimeOfFlight() {
+    return timeOfFlightMap.get(maxDistance);
   }
 
   public LaunchingParameters getParameters() {
@@ -146,15 +153,10 @@ public class LaunchCalculator {
     }
 
     // Calculate parameters accounted for imparted velocity
+    Rotation2d driveAngleNoLookahead =
+        target.minus(launcherPosition.getTranslation()).getAngle().plus(Rotation2d.kPi);
     Rotation2d driveAngle =
         target.minus(lookaheadPose.getTranslation()).getAngle().plus(Rotation2d.kPi);
-    if (lookaheadLauncherToTargetDistance < maxDistanceForReverseLaunch) {
-      var robotAngle = RobotState.getInstance().getRotation();
-      driveAngle =
-          robotAngle.getRadians() > target.getAngle().getRadians() + Units.degreesToRadians(90)
-              ? driveAngle
-              : driveAngle.plus(Rotation2d.kPi);
-    }
     double hoodAngle = hoodAngleMap.get(lookaheadLauncherToTargetDistance).getRadians();
 
     if (lastDriveAngle == null) lastDriveAngle = driveAngle;
@@ -165,15 +167,20 @@ public class LaunchCalculator {
     double driveVelocity =
         driveAngleFilter.calculate(
             driveAngle.minus(lastDriveAngle).getRadians() / Constants.loopPeriodSecs);
+    lastDriveAngle = driveAngle;
     latestParameters =
         new LaunchingParameters(
             lookaheadLauncherToTargetDistance >= minDistance
                 && lookaheadLauncherToTargetDistance <= maxDistance,
             driveAngle,
+            driveAngleNoLookahead,
             driveVelocity,
             hoodAngle,
             hoodVelocity,
-            flywheelSpeedMap.get(lookaheadLauncherToTargetDistance));
+            flywheelSpeedMap.get(lookaheadLauncherToTargetDistance),
+            lookaheadLauncherToTargetDistance,
+            launcherToTargetDistance,
+            timeOfFlight);
 
     // Log calculated values
     Logger.recordOutput("LaunchCalculator/LookaheadPose", lookaheadPose);
@@ -181,6 +188,10 @@ public class LaunchCalculator {
         "LaunchCalculator/LauncherToTargetDistance", lookaheadLauncherToTargetDistance);
 
     return latestParameters;
+  }
+
+  public double getNaiveTOF(double distance) {
+    return timeOfFlightMap.get(distance);
   }
 
   public void clearLaunchingParameters() {
