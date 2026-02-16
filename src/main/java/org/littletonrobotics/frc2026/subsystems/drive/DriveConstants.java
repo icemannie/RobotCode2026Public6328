@@ -17,8 +17,10 @@ public class DriveConstants {
 
   public static final double compbotTrackWidthXInches = 21.25;
   public static final double compbotTrackWidthYInches = 22.25;
-  public static final double compbotFullWidthXInches = 34.5;
-  public static final double compbotFullWidthYInches = 35.5;
+  public static final double compbotFrameWidthXInches = 26.5;
+  public static final double compbotFrameWidthYInches = 27.5;
+  public static final double compbotFullWidthXInches = 33.0;
+  public static final double compbotFullWidthYInches = 34.0;
   public static final double compbotMaxLinearSpeed = 4.2; // Theoretical max is 4.4196
   public static final double compbotMaxTrajectoryLinearSpeed = 4.0;
   public static final double compbotMaxAngularSpeed =
@@ -64,8 +66,10 @@ public class DriveConstants {
 
   public static final double alphabotTrackWidthXInches = 22.75;
   public static final double alphabotTrackWidthYInches = 22.75;
-  public static final double alphabotFullWidthXInches = 28;
-  public static final double alphabotFullWidthYInches = 28;
+  public static final double alphabotFrameWidthXInches = 28.0;
+  public static final double alphabotFrameWidthYInches = 28.0;
+  public static final double alphabotFullWidthXInches = 34.5;
+  public static final double alphabotFullWidthYInches = 34.5;
   public static final double alphabotMaxLinearSpeed = 4.69;
   public static final double alphabotMaxTrajectoryLinearSpeed = 4.0;
   public static final double alphabotMaxAngularSpeed = 6.46; // maxLinearSpeed / driveBaseRadius
@@ -115,6 +119,7 @@ public class DriveConstants {
   public static final double turnKd = 50.0;
   public static final double turnDeadbandDegrees = 0.3;
   public static final double driveCurrentLimitAmps = 80;
+  public static final double driveSupplyCurrentLimitAmps = 40;
   public static final double turnCurrentLimitAmps = 40;
 
   public static final double trackWidthX =
@@ -127,6 +132,16 @@ public class DriveConstants {
           Constants.robot == RobotType.ALPHABOT
               ? alphabotTrackWidthYInches
               : compbotTrackWidthYInches);
+  public static final double frameWidthX =
+      Units.inchesToMeters(
+          Constants.robot == RobotType.ALPHABOT
+              ? alphabotFrameWidthXInches
+              : compbotFrameWidthXInches);
+  public static final double frameWidthY =
+      Units.inchesToMeters(
+          Constants.robot == RobotType.ALPHABOT
+              ? alphabotFrameWidthYInches
+              : compbotFrameWidthYInches);
   public static final double fullWidthX =
       Units.inchesToMeters(
           Constants.robot == RobotType.ALPHABOT
@@ -184,6 +199,8 @@ public class DriveConstants {
   public static final double turnReductionBR =
       Constants.robot == RobotType.ALPHABOT ? alphabotTurnReductionBR : compbotTurnReductionBR;
 
-  public static final double intakeOffsetX = fullWidthX / 2.0 + Units.inchesToMeters(4.0);
-  public static final double intakeWidth = Units.inchesToMeters(27.0);
+  public static final double intakeNearX = fullWidthX / 2.0;
+  public static final double intakeFarX = frameWidthX / 2.0 + Units.inchesToMeters(12.0);
+  public static final double intakeReferenceX = intakeNearX;
+  public static final double intakeWidth = frameWidthY;
 }

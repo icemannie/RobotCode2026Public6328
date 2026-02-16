@@ -9,6 +9,7 @@ package org.littletonrobotics.frc2026.subsystems.launcher;
 
 import static org.littletonrobotics.frc2026.subsystems.launcher.LauncherConstants.*;
 
+import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.math.filter.LinearFilter;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
@@ -46,7 +47,6 @@ public class LaunchCalculator {
   public record LaunchingParameters(
       boolean isValid,
       Rotation2d driveAngle,
-      Rotation2d driveAngleNoLookahead,
       double driveVelocity,
       double hoodAngle,
       double hoodVelocity,
@@ -125,9 +125,11 @@ public class LaunchCalculator {
                 robotRelativeVelocity.vyMetersPerSecond * phaseDelay,
                 robotRelativeVelocity.omegaRadiansPerSecond * phaseDelay));
 
-    // Calculate distance from launcher to target
+    // Calculate target
     Translation2d target =
         AllianceFlipUtil.apply(FieldConstants.Hub.topCenterPoint.toTranslation2d());
+
+    // Calculate distance from launcher to target
     Pose2d launcherPosition = estimatedPose.transformBy(robotToLauncher.toTransform2d());
     double launcherToTargetDistance = target.getDistance(launcherPosition.getTranslation());
 
@@ -152,11 +154,21 @@ public class LaunchCalculator {
       lookaheadLauncherToTargetDistance = target.getDistance(lookaheadPose.getTranslation());
     }
 
-    // Calculate parameters accounted for imparted velocity
-    Rotation2d driveAngleNoLookahead =
-        target.minus(launcherPosition.getTranslation()).getAngle().plus(Rotation2d.kPi);
+    // Account for launcher being off-center
+    Pose2d lookaheadRobotPose =
+        lookaheadPose.transformBy(robotToLauncher.toTransform2d().inverse());
+    Rotation2d fieldToHubAngle = target.minus(lookaheadRobotPose.getTranslation()).getAngle();
+    Rotation2d hubAngle =
+        new Rotation2d(
+            Math.asin(
+                MathUtil.clamp(
+                    robotToLauncher.getTranslation().getY()
+                        / target.getDistance(lookaheadRobotPose.getTranslation()),
+                    -1.0,
+                    1.0)));
     Rotation2d driveAngle =
-        target.minus(lookaheadPose.getTranslation()).getAngle().plus(Rotation2d.kPi);
+        fieldToHubAngle.plus(hubAngle).plus(robotToLauncher.getRotation().toRotation2d());
+
     double hoodAngle = hoodAngleMap.get(lookaheadLauncherToTargetDistance).getRadians();
 
     if (lastDriveAngle == null) lastDriveAngle = driveAngle;
@@ -173,7 +185,6 @@ public class LaunchCalculator {
             lookaheadLauncherToTargetDistance >= minDistance
                 && lookaheadLauncherToTargetDistance <= maxDistance,
             driveAngle,
-            driveAngleNoLookahead,
             driveVelocity,
             hoodAngle,
             hoodVelocity,

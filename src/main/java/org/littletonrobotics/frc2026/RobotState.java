@@ -37,7 +37,10 @@ public class RobotState {
   // Pose estimation fields
   @Getter @AutoLogOutput private Pose2d odometryPose = Pose2d.kZero;
   @Getter @AutoLogOutput private Pose2d estimatedPose = Pose2d.kZero;
+
   private final TimeInterpolatableBuffer<Pose2d> poseBuffer =
+      TimeInterpolatableBuffer.createBuffer(poseBufferSizeSec);
+  private final TimeInterpolatableBuffer<Rotation3d> rotationBuffer =
       TimeInterpolatableBuffer.createBuffer(poseBufferSizeSec);
   private final Matrix<N3, N1> qStdDevs = new Matrix<>(Nat.N3(), Nat.N1());
 
@@ -91,22 +94,22 @@ public class RobotState {
     return ChassisSpeeds.fromRobotRelativeSpeeds(robotVelocity, getRotation());
   }
 
-  /** Returns the estimated pose of the intake. */
+  /** Returns the estimated pose of the near part of the intake. */
   public Pose2d getIntakePose() {
     return estimatedPose.transformBy(
-        new Translation2d(DriveConstants.intakeOffsetX, 0.0).toTransform2d());
+        new Translation2d(DriveConstants.intakeReferenceX, 0.0).toTransform2d());
   }
 
-  /** Returns the field-relative velocity of the intake. */
+  /** Returns the field-relative velocity of the near part of the intake. */
   public ChassisSpeeds getIntakeFieldVelocity() {
     var robotVelocity = getFieldVelocity();
     return new ChassisSpeeds(
         robotVelocity.vxMetersPerSecond
-            - DriveConstants.intakeOffsetX
+            - DriveConstants.intakeReferenceX
                 * getRotation().getSin()
                 * robotVelocity.omegaRadiansPerSecond,
         robotVelocity.vyMetersPerSecond
-            + DriveConstants.intakeOffsetX
+            + DriveConstants.intakeReferenceX
                 * getRotation().getCos()
                 * robotVelocity.omegaRadiansPerSecond,
         robotVelocity.omegaRadiansPerSecond);
@@ -121,7 +124,7 @@ public class RobotState {
     odometryPose = odometryPose.exp(twist);
 
     // Replace odometry pose with gyro if present
-    observation.gyroAngle.ifPresent(
+    observation.yaw.ifPresent(
         gyroAngle -> {
           // Add offset to measured angle
           Rotation2d angle = gyroAngle.plus(gyroOffset);
@@ -131,6 +134,15 @@ public class RobotState {
     // Add pose to buffer at timestamp
     poseBuffer.addSample(observation.timestamp(), odometryPose);
 
+    // Add rotation to buffer at timestamp
+    if (observation.roll.isPresent()) {
+      rotationBuffer.addSample(
+          observation.timestamp(),
+          new Rotation3d(
+              observation.roll.get().getRadians(),
+              observation.pitch.get().getRadians(),
+              observation.yaw.get().getRadians()));
+    }
     // Apply odometry delta to vision pose estimate
     Twist2d finalTwist = lastOdometryPose.log(odometryPose);
     estimatedPose = estimatedPose.exp(finalTwist);
@@ -198,10 +210,32 @@ public class RobotState {
     estimatedPose = estimateAtTime.plus(scaledTransform).plus(sampleToOdometryTransform);
   }
 
+  public Optional<Pose2d> getEstimatedPoseAtTimestamp(double timestamp) {
+    var oldOdometryPose = poseBuffer.getSample(timestamp);
+    if (oldOdometryPose.isEmpty()) {
+      return Optional.empty();
+    }
+    return Optional.of(
+        RobotState.getInstance()
+            .getEstimatedPose()
+            .transformBy(
+                new Transform2d(
+                    RobotState.getInstance().getOdometryPose(), oldOdometryPose.get())));
+  }
+
+  public Optional<Rotation3d> getEstimatedRotation3dAtTimestamp(double timestamp) {
+    var estimatedRotation = rotationBuffer.getSample(timestamp);
+    return estimatedRotation;
+  }
+
   // MARK: - Type declarations
 
   public record OdometryObservation(
-      double timestamp, SwerveModulePosition[] wheelPositions, Optional<Rotation2d> gyroAngle) {}
+      double timestamp,
+      SwerveModulePosition[] wheelPositions,
+      Optional<Rotation2d> roll,
+      Optional<Rotation2d> pitch,
+      Optional<Rotation2d> yaw) {}
 
   public record VisionObservation(double timestamp, Pose3d visionPose, Matrix<N3, N1> stdDevs) {}
 }

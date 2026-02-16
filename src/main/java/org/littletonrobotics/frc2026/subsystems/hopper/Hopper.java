@@ -7,43 +7,94 @@
 
 package org.littletonrobotics.frc2026.subsystems.hopper;
 
+import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.filter.Debouncer.DebounceType;
+import edu.wpi.first.math.filter.MedianFilter;
 import lombok.Getter;
 import lombok.Setter;
+import org.littletonrobotics.frc2026.Constants;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystem;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO;
+import org.littletonrobotics.frc2026.subsystems.sensors.FuelSensorIO;
+import org.littletonrobotics.frc2026.subsystems.sensors.FuelSensorIOInputsAutoLogged;
 import org.littletonrobotics.frc2026.util.FullSubsystem;
 import org.littletonrobotics.frc2026.util.LoggedTracer;
 import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.junction.AutoLogOutput;
+import org.littletonrobotics.junction.Logger;
 
 public class Hopper extends FullSubsystem {
   private static final LoggedTunableNumber rollerLaunchVolts =
       new LoggedTunableNumber("Hopper/Roller/LaunchVolts", 12.0);
   private static final LoggedTunableNumber rollerOuttakeVolts =
       new LoggedTunableNumber("Hopper/Roller/OuttakeVolts", -12.0);
-  private static final LoggedTunableNumber leftIndexerLaunchVolts =
-      new LoggedTunableNumber("Hopper/Indexer/LeftLaunchVolts", 6.0);
-  private static final LoggedTunableNumber leftIndexerOuttakeVolts =
-      new LoggedTunableNumber("Hopper/Indexer/LeftOuttakeVolts", -6.0);
-  private static final LoggedTunableNumber rightIndexerLaunchVolts =
-      new LoggedTunableNumber("Hopper/Indexer/RightLaunchVolts", 6.0);
-  private static final LoggedTunableNumber rightIndexerOuttakeVolts =
-      new LoggedTunableNumber("Hopper/Indexer/LeftOuttakeVolts", -6.0);
+
+  // Hopper depth meters
+  private static final LoggedTunableNumber fuelDebounceTime =
+      new LoggedTunableNumber("Hopper/LaserCan/DebounceTime", 1.0);
+  private static final double[] hopperDepths = {0.5842, 0.4842, 0.43815, 0.2921, 0.14605, 0.0};
+  private final Debouncer[] debouncers = {
+    new Debouncer(fuelDebounceTime.get(), DebounceType.kRising),
+    new Debouncer(fuelDebounceTime.get(), DebounceType.kRising),
+    new Debouncer(fuelDebounceTime.get(), DebounceType.kRising),
+    new Debouncer(fuelDebounceTime.get(), DebounceType.kRising),
+    new Debouncer(fuelDebounceTime.get(), DebounceType.kRising)
+  };
+
+  private double maxRawDepth;
+
+  // Length of filter time / loop cycle time
+  private static final MedianFilter fuelFilter =
+      new MedianFilter((int) (5.0 / Constants.loopPeriodSecs));
 
   private final RollerSystem roller;
-  private final RollerSystem rollerRight;
+  private final FuelSensorIO sensorLeft;
+  private final FuelSensorIO sensorRight;
+  private final FuelSensorIOInputsAutoLogged sensorLeftInputs = new FuelSensorIOInputsAutoLogged();
+  private final FuelSensorIOInputsAutoLogged sensorRightInputs = new FuelSensorIOInputsAutoLogged();
 
   @Getter @Setter @AutoLogOutput private Goal goal = Goal.STOP;
+  @Getter @AutoLogOutput private HopperLevel hopperLevel = HopperLevel.EMPTY;
 
-  public Hopper(RollerSystemIO rollerIO, RollerSystemIO rollerIORight) {
-    this.roller = new RollerSystem("Hopper roller left", "Hopper/RollerLeft", rollerIO);
-    this.rollerRight = new RollerSystem("Hopper roller right", "Hopper/RollerRight", rollerIORight);
+  public Hopper(
+      RollerSystemIO rollerIO, FuelSensorIO fuelSensorIOLeft, FuelSensorIO fuelSensorIORight) {
+    this.roller = new RollerSystem("Hopper roller", "Hopper/Roller", rollerIO);
+    this.sensorLeft = fuelSensorIOLeft;
+    this.sensorRight = fuelSensorIORight;
   }
 
   public void periodic() {
-
+    sensorLeft.updateInputs(sensorLeftInputs);
+    sensorRight.updateInputs(sensorRightInputs);
+    Logger.processInputs("Hopper/Sensors/LeftSensor", sensorLeftInputs);
+    Logger.processInputs("Hopper/Sensors/RightSensor", sensorRightInputs);
     roller.periodic();
-    rollerRight.periodic();
+
+    if (sensorLeftInputs.valid && !sensorRightInputs.valid) {
+      maxRawDepth = sensorLeftInputs.distanceMeters;
+    } else if (sensorLeftInputs.valid && !sensorRightInputs.valid) {
+      maxRawDepth = sensorRightInputs.distanceMeters;
+    } else if (sensorLeftInputs.valid && sensorRightInputs.valid) {
+      maxRawDepth = Math.max(sensorLeftInputs.distanceMeters, sensorRightInputs.distanceMeters);
+    }
+
+    double filteredMaxDepth = fuelFilter.calculate(maxRawDepth);
+    Logger.recordOutput("Hopper/LaserCan/MaxRawDepth", maxRawDepth);
+    Logger.recordOutput("Hopper/LaserCan/FiltererdMaxDepth", filteredMaxDepth);
+
+    // Debouncer filtered depth
+    for (int i = 0; i < hopperDepths.length - 1; i++) {
+      if (filteredMaxDepth < hopperDepths[i] && filteredMaxDepth >= hopperDepths[i + 1]) {
+        if (debouncers[i].calculate(true)) {
+          hopperLevel = HopperLevel.values()[i];
+        }
+        for (int d = 0; d < debouncers.length; d++) {
+          if (d != i) {
+            debouncers[d].calculate(false);
+          }
+        }
+      }
+    }
 
     double rollerVolts = 0.0;
 
@@ -59,14 +110,12 @@ public class Hopper extends FullSubsystem {
       }
     }
     roller.runOpenLoop(rollerVolts);
-    rollerRight.runOpenLoop(rollerVolts);
     LoggedTracer.record("Hopper/Periodic");
   }
 
   @Override
   public void periodicAfterScheduler() {
     roller.periodicAfterScheduler();
-    rollerRight.periodicAfterScheduler();
     LoggedTracer.record("Hopper/AfterScheduler");
   }
 
@@ -74,5 +123,22 @@ public class Hopper extends FullSubsystem {
     LAUNCH,
     OUTTAKE,
     STOP
+  }
+
+  public enum HopperLevel {
+    /** No fuel */
+    EMPTY,
+
+    /** 0-25% full */
+    FULL_0_25,
+
+    /** 25-50% full */
+    FULL_25_50,
+
+    /** 50-75% full */
+    FULL_50_75,
+
+    /** 75-100% full */
+    FULL_75_100
   }
 }

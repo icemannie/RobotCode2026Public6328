@@ -89,6 +89,8 @@ public class Drive extends FullSubsystem {
             new OdometryObservation(
                 Timer.getTimestamp(),
                 getModulePositions(),
+                Optional.ofNullable(gyroInputs.connected ? gyroInputs.rollPosition : null),
+                Optional.ofNullable(gyroInputs.connected ? gyroInputs.pitchPosition : null),
                 Optional.ofNullable(gyroInputs.connected ? gyroInputs.yawPosition : null)));
     RobotState.getInstance().setRobotVelocity(getChassisSpeeds());
 

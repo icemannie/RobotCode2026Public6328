@@ -37,6 +37,9 @@ public class FieldConstants {
   public static final double fieldLength = AprilTagLayoutType.OFFICIAL.getLayout().getFieldLength();
   public static final double fieldWidth = AprilTagLayoutType.OFFICIAL.getLayout().getFieldWidth();
 
+  // Fuel dimensions
+  public static final double fuelDiameter = Units.inchesToMeters(5.91);
+
   /**
    * Officially defined and relevant vertical lines found on the field (defined by X-axis offset)
    */

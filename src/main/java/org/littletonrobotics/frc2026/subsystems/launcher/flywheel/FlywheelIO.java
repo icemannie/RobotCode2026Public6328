@@ -13,26 +13,35 @@ public interface FlywheelIO {
   @AutoLog
   public static class FlywheelIOInputs {
     public boolean connected;
-    public boolean followerConnected;
+    public boolean follower1Connected;
+    public boolean follower2Connected;
+    public boolean follower3Connected;
     public double positionRads;
     public double velocityRadsPerSec;
     public double appliedVoltage;
     public double supplyCurrentAmps;
     public double torqueCurrentAmps;
     public double tempCelsius;
-    public double followerSupplyCurrentAmps;
-    public double followerTempCelsius;
+    public double follower1SupplyCurrentAmps;
+    public double follower1TempCelsius;
+    public double follower2SupplyCurrentAmps;
+    public double follower2TempCelsius;
+    public double follower3SupplyCurrentAmps;
+    public double follower3TempCelsius;
   }
 
   public static enum FlywheelIOOutputMode {
     COAST,
-    DUTY_CYCLE_BANG_BANG,
-    TORQUE_CURRENT_BANG_BANG
+    VELOCITY
   }
 
   public static class FlywheelIOOutputs {
     public FlywheelIOOutputMode mode = FlywheelIOOutputMode.COAST;
     public double velocityRadsPerSec = 0.0;
+    public double feedforward = 0.0;
+
+    public double kP;
+    public double kD;
   }
 
   default void updateInputs(FlywheelIOInputs inputs) {}

@@ -45,6 +45,7 @@ import org.littletonrobotics.frc2026.subsystems.leds.Leds;
 import org.littletonrobotics.frc2026.subsystems.leds.LedsIO;
 import org.littletonrobotics.frc2026.subsystems.leds.LedsIOHAL;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO;
+import org.littletonrobotics.frc2026.subsystems.sensors.FuelSensorIO;
 import org.littletonrobotics.frc2026.subsystems.vision.Vision;
 import org.littletonrobotics.frc2026.subsystems.vision.VisionIO;
 import org.littletonrobotics.frc2026.util.HubShiftUtil;
@@ -63,8 +64,7 @@ public class RobotContainer {
   private Hopper hopper;
   private Kicker kicker;
   private Hood hood;
-  private Flywheel leftFlywheel;
-  private Flywheel rightFlywheel;
+  private Flywheel flywheel;
   private Vision vision;
   private Leds leds;
 
@@ -87,7 +87,7 @@ public class RobotContainer {
   private final LoggedTunableNumber presetHoodAngleDegrees =
       new LoggedTunableNumber("PresetHoodAngleDegrees", 30.0);
   private final LoggedTunableNumber presetFlywheelSpeedRadPerSec =
-      new LoggedTunableNumber("PresetFlywheelSpeedRadPerSec", 500);
+      new LoggedTunableNumber("PresetFlywheelSpeedRadPerSec", 290);
 
   private boolean coastOverride = false;
 
@@ -130,24 +130,23 @@ public class RobotContainer {
       intake = new Intake(new RollerSystemIO() {});
     }
     if (hopper == null) {
-      hopper = new Hopper(new RollerSystemIO() {}, new RollerSystemIO() {});
+      hopper = new Hopper(new RollerSystemIO() {}, new FuelSensorIO() {}, new FuelSensorIO() {});
     }
     if (hood == null) {
       hood = new Hood(new HoodIO() {});
     }
-    if (leftFlywheel == null) {
-      leftFlywheel = new Flywheel("FlywheelLeft", new FlywheelIO() {});
-    }
-    if (rightFlywheel == null) {
-      rightFlywheel = new Flywheel("FlywheelRight", new FlywheelIO() {});
+    if (flywheel == null) {
+      flywheel = new Flywheel("Flywheel", new FlywheelIO() {});
     }
     if (kicker == null) {
-      kicker = new Kicker(new RollerSystemIO() {}, new RollerSystemIO() {});
+      kicker = new Kicker(new RollerSystemIO() {});
     }
     if (vision == null) {
       switch (Constants.robot) {
         case COMPBOT -> vision = new Vision(this::getSelectedAprilTagLayout);
-        case ALPHABOT -> vision = new Vision(this::getSelectedAprilTagLayout, new VisionIO() {});
+        case ALPHABOT ->
+            vision =
+                new Vision(this::getSelectedAprilTagLayout, new VisionIO() {}, new VisionIO() {});
         default -> vision = new Vision(this::getSelectedAprilTagLayout);
       }
     }
@@ -177,8 +176,7 @@ public class RobotContainer {
 
     // Set default commands
     hood.setDefaultCommand(hood.runTrackTargetCommand());
-    leftFlywheel.setDefaultCommand(leftFlywheel.runTrackTargetCommand());
-    rightFlywheel.setDefaultCommand(rightFlywheel.runTrackTargetCommand());
+    flywheel.setDefaultCommand(flywheel.runTrackTargetCommand());
     intake.setDefaultCommand(
         Commands.startEnd(
             () -> intake.setGoal(Intake.Goal.INTAKE),
@@ -216,9 +214,8 @@ public class RobotContainer {
     primary
         .leftClaw()
         .whileTrue(
-            leftFlywheel
+            flywheel
                 .runFixedCommand(presetFlywheelSpeedRadPerSec)
-                .alongWith(rightFlywheel.runFixedCommand(presetFlywheelSpeedRadPerSec))
                 .alongWith(
                     hood.runFixedCommand(
                         () -> Units.degreesToRadians(presetHoodAngleDegrees.get()), () -> 0.0)));
@@ -227,8 +224,7 @@ public class RobotContainer {
         .whileTrue(DriveCommands.joystickDriveWhileLaunching(drive, driverX, driverY))
         .and(() -> LaunchCalculator.getInstance().getParameters().isValid())
         // .and(hood::atGoal)
-        // .and(leftFlywheel::atGoal)
-        // .and(rightFlywheel::atGoal)
+        // .and(flywheel::atGoal)
         .and(() -> DriveCommands.atLaunchGoal())
         .debounce(0.1, DebounceType.kRising)
         .whileTrue(

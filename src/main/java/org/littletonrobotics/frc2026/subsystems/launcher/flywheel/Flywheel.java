@@ -8,7 +8,6 @@
 package org.littletonrobotics.frc2026.subsystems.launcher.flywheel;
 
 import edu.wpi.first.math.filter.Debouncer;
-import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.DoubleSupplier;
@@ -32,23 +31,21 @@ public class Flywheel extends FullSubsystem {
 
   private final Debouncer motorConnectedDebouncer =
       new Debouncer(0.5, Debouncer.DebounceType.kFalling);
-  private final Debouncer motorFollowerConnectedDebouncer =
+  private final Debouncer motorFollower1ConnectedDebouncer =
+      new Debouncer(0.5, Debouncer.DebounceType.kFalling);
+  private final Debouncer motorFollower2ConnectedDebouncer =
+      new Debouncer(0.5, Debouncer.DebounceType.kFalling);
+  private final Debouncer motorFollower3ConnectedDebouncer =
       new Debouncer(0.5, Debouncer.DebounceType.kFalling);
   private final Alert disconnected;
-  private final Alert followerDisconnected;
+  private final Alert follower1Disconnected;
+  private final Alert follower2Disconnected;
+  private final Alert follower3Disconnected;
 
-  private static final LoggedTunableNumber torqueCurrentControlTolerance =
-      new LoggedTunableNumber("Flywheel/TorqueCurrentControlTolerance", 20.0);
-  private static final LoggedTunableNumber torqueCurrentControlDebounce =
-      new LoggedTunableNumber("Flywheel/TorqueCurrentControlDebounce", 0.025);
-  private static final LoggedTunableNumber atGoalDebounce =
-      new LoggedTunableNumber("Flywheel/AtGoalDebounce", 0.2);
-
-  private Debouncer torqueCurrentDebouncer =
-      new Debouncer(torqueCurrentControlDebounce.get(), DebounceType.kFalling);
-  private Debouncer atGoalDebouncer = new Debouncer(atGoalDebounce.get(), DebounceType.kFalling);
-  private boolean lastTorqueCurrentControl = false;
-  @AutoLogOutput private long launchCount = 0;
+  private static final LoggedTunableNumber kP = new LoggedTunableNumber("Flywheel/kP", 0.6);
+  private static final LoggedTunableNumber kD = new LoggedTunableNumber("Flywheel/kD", 0.0);
+  private static final LoggedTunableNumber kS = new LoggedTunableNumber("Flywheel/kS", 0.3);
+  private static final LoggedTunableNumber kV = new LoggedTunableNumber("Flywheel/kV", 0.0195);
 
   @Getter
   @Accessors(fluent = true)
@@ -60,27 +57,32 @@ public class Flywheel extends FullSubsystem {
     this.io = io;
 
     disconnected = new Alert("Flywheel motor disconnected!", Alert.AlertType.kWarning);
-    followerDisconnected =
-        new Alert("Flywheel follower motor disconnected!", Alert.AlertType.kWarning);
+    follower1Disconnected =
+        new Alert("Flywheel follower 1 motor disconnected!", Alert.AlertType.kWarning);
+    follower2Disconnected =
+        new Alert("Flywheel follower 2 motor disconnected!", Alert.AlertType.kWarning);
+    follower3Disconnected =
+        new Alert("Flywheel follower 3 motor disconnected!", Alert.AlertType.kWarning);
   }
 
   public void periodic() {
     io.updateInputs(inputs);
     Logger.processInputs(name, inputs);
 
-    if (torqueCurrentControlDebounce.hasChanged(hashCode())) {
-      torqueCurrentDebouncer =
-          new Debouncer(torqueCurrentControlDebounce.get(), DebounceType.kFalling);
-    }
-    if (atGoalDebounce.hasChanged(hashCode())) {
-      atGoalDebouncer = new Debouncer(atGoalDebounce.get(), DebounceType.kFalling);
-    }
+    outputs.kP = kP.get();
+    outputs.kD = kD.get();
 
     disconnected.set(
         Robot.showHardwareAlerts() && !motorConnectedDebouncer.calculate(inputs.connected));
-    followerDisconnected.set(
+    follower1Disconnected.set(
         Robot.showHardwareAlerts()
-            && !motorFollowerConnectedDebouncer.calculate(inputs.followerConnected));
+            && !motorFollower1ConnectedDebouncer.calculate(inputs.follower1Connected));
+    follower2Disconnected.set(
+        Robot.showHardwareAlerts()
+            && !motorFollower2ConnectedDebouncer.calculate(inputs.follower2Connected));
+    follower3Disconnected.set(
+        Robot.showHardwareAlerts()
+            && !motorFollower3ConnectedDebouncer.calculate(inputs.follower3Connected));
 
     LoggedTracer.record("Flywheel/Periodic");
   }
@@ -95,22 +97,10 @@ public class Flywheel extends FullSubsystem {
 
   /** Run closed loop at the specified velocity. */
   private void runVelocity(double velocityRadsPerSec) {
-    boolean inTolerance =
-        Math.abs(inputs.velocityRadsPerSec - velocityRadsPerSec)
-            <= torqueCurrentControlTolerance.get();
-    boolean torqueCurrentControl = torqueCurrentDebouncer.calculate(inTolerance);
-    atGoal = atGoalDebouncer.calculate(inTolerance);
-
-    if (!torqueCurrentControl && lastTorqueCurrentControl) {
-      launchCount++;
-    }
-    lastTorqueCurrentControl = torqueCurrentControl;
-
-    outputs.mode =
-        torqueCurrentControl
-            ? FlywheelIOOutputMode.TORQUE_CURRENT_BANG_BANG
-            : FlywheelIOOutputMode.DUTY_CYCLE_BANG_BANG;
+    outputs.mode = FlywheelIOOutputMode.VELOCITY;
     outputs.velocityRadsPerSec = velocityRadsPerSec;
+    outputs.feedforward =
+        Math.signum(velocityRadsPerSec) * kS.get() + velocityRadsPerSec * kV.get();
     Logger.recordOutput(name + "/Setpoint", velocityRadsPerSec);
   }
 

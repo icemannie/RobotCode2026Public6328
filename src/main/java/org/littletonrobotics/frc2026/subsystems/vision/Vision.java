@@ -19,6 +19,8 @@ import java.util.function.Supplier;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.frc2026.FieldConstants;
 import org.littletonrobotics.frc2026.FieldConstants.AprilTagLayoutType;
+import org.littletonrobotics.frc2026.ObjectDetection;
+import org.littletonrobotics.frc2026.ObjectDetection.FuelTxTyObservation;
 import org.littletonrobotics.frc2026.RobotState;
 import org.littletonrobotics.frc2026.RobotState.VisionObservation;
 import org.littletonrobotics.frc2026.util.LoggedTracer;
@@ -107,6 +109,8 @@ public class Vision extends VirtualSubsystem {
     List<Pose3d> allRobotPoses = new ArrayList<>();
     List<VisionObservation> allVisionObservations = new ArrayList<>();
     for (int instanceIndex = 0; instanceIndex < io.length; instanceIndex++) {
+      List<FuelTxTyObservation> instanceFuelTxTyObservations = new ArrayList<>();
+
       // Loop over frames
       for (int frameIndex = 0;
           frameIndex < aprilTagInputs[instanceIndex].timestamps.length;
@@ -233,6 +237,34 @@ public class Vision extends VirtualSubsystem {
             "AprilTagVision/Inst" + instanceIndex + "/TagPoses", tagPoses.toArray(Pose3d[]::new));
       }
 
+      // Record object detection observations
+      for (int frameIndex = 0;
+          frameIndex < objDetectInputs[instanceIndex].timestamps.length;
+          frameIndex++) {
+        double[] frame = objDetectInputs[instanceIndex].frames[frameIndex];
+        for (int i = 0; i < frame.length; i += 10) {
+          switch ((int) frame[i]) {
+            case 0 -> {
+              // Fuel
+              if (frame[i + 1] >= fuelDetectConfidenceThreshold) {
+                double[] tx = new double[4];
+                double[] ty = new double[4];
+                for (int z = 0; z < 4; z++) {
+                  tx[z] = frame[i + 2 + (2 * z)];
+                  ty[z] = frame[i + 2 + (2 * z) + 1];
+                }
+                instanceFuelTxTyObservations.add(
+                    new FuelTxTyObservation(
+                        instanceIndex,
+                        tx,
+                        ty,
+                        objDetectInputs[instanceIndex].timestamps[frameIndex]));
+              }
+            }
+          }
+        }
+      }
+
       // If no frames from instances, clear robot pose
       if (aprilTagInputs[instanceIndex].timestamps.length == 0) {
         Logger.recordOutput("AprilTagVision/Inst" + instanceIndex + "/RobotPose", Pose3d.kZero);
@@ -241,6 +273,19 @@ public class Vision extends VirtualSubsystem {
       // If no recent frames from instance, clear tag poses
       if (Timer.getTimestamp() - lastFrameTimes.get(instanceIndex) > targetLogTimeSecs) {
         Logger.recordOutput("AprilTagVision/Inst" + instanceIndex + "/TagPoses", new Pose3d[] {});
+      }
+
+      // If got object frames, clear and send new data
+      if (objDetectInputs[instanceIndex].timestamps.length > 0) {
+        double mostRecentTimestamp =
+            objDetectInputs[instanceIndex].timestamps.length > 0
+                ? objDetectInputs[instanceIndex]
+                    .timestamps[objDetectInputs[instanceIndex].timestamps.length - 1]
+                : 0.0;
+        ObjectDetection.getInstance().clearFuelInCameraFOV(mostRecentTimestamp, instanceIndex);
+        instanceFuelTxTyObservations.stream()
+            .filter(x -> x.timestamp() == mostRecentTimestamp)
+            .forEach(ObjectDetection.getInstance()::addFuelTxTyObservation);
       }
     }
 

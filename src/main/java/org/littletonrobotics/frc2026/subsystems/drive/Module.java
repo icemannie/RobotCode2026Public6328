@@ -31,6 +31,7 @@ public class Module {
 
   private final Alert driveDisconnectedAlert;
   private final Alert turnDisconnectedAlert;
+  private final Alert encoderDisconnectedAlert;
 
   public Module(ModuleIO io, int index) {
     this.io = io;
@@ -42,6 +43,9 @@ public class Module {
     turnDisconnectedAlert =
         new Alert(
             "Disconnected turn motor on module " + Integer.toString(index) + ".", AlertType.kError);
+    encoderDisconnectedAlert =
+        new Alert(
+            "Disconnected encoder on module " + Integer.toString(index) + ".", AlertType.kError);
   }
 
   public void periodic() {
@@ -51,6 +55,7 @@ public class Module {
     // Update alerts
     driveDisconnectedAlert.set(Robot.showHardwareAlerts() && !inputs.driveConnected);
     turnDisconnectedAlert.set(Robot.showHardwareAlerts() && !inputs.turnConnected);
+    encoderDisconnectedAlert.set(Robot.showHardwareAlerts() && !inputs.encoderConnected);
 
     // Record cycle times
     LoggedTracer.record("Drive/Module" + index + "/Periodic");

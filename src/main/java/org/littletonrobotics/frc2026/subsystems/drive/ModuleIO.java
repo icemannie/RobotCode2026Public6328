@@ -22,6 +22,7 @@ public interface ModuleIO {
     public double driveTempCelsius;
 
     public boolean turnConnected = false;
+    public boolean encoderConnected = false;
     public Rotation2d turnAbsolutePositionRads = Rotation2d.kZero;
     public Rotation2d turnPositionRads = Rotation2d.kZero;
     public double turnVelocityRadsPerSec = 0.0;

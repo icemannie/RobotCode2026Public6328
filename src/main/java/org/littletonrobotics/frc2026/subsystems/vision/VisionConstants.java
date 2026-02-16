@@ -25,9 +25,13 @@ public class VisionConstants {
   public static final double xyStdDevCoefficient = 0.01;
   public static final double thetaStdDevCoefficient = 0.03;
 
+  public static final double fuelDetectConfidenceThreshold = 0.2;
+
   private static int monoExposure = 1500;
   private static double monoGain = 15.0;
   private static double monoDenoise = 1.0;
+  private static int colorExposure = 4500;
+  private static double colorGain = 5.0;
 
   public static CameraConfig[] cameras =
       switch (Constants.robot) {
@@ -54,6 +58,29 @@ public class VisionConstants {
                   .gain(monoGain)
                   .denoise(monoDenoise)
                   .stdDevFactor(1.0)
+                  .fovRads(Units.degreesToRadians(75.0))
+                  .build(),
+              CameraConfig.builder()
+                  .poseFunction(
+                      (Double timestamp) -> {
+                        return Optional.of(
+                            new Pose3d(
+                                Units.inchesToMeters(-28.0 / 2.0 + 2.25),
+                                Units.inchesToMeters(-28.0 / 2.0 + 2.75),
+                                Units.inchesToMeters(18.0),
+                                new Rotation3d(
+                                    Units.degreesToRadians(11.0),
+                                    Units.degreesToRadians(15.0),
+                                    Units.degreesToRadians(-167.0))));
+                      })
+                  .id("24737133")
+                  .width(1280)
+                  .height(960)
+                  .exposure(colorExposure)
+                  .gain(colorGain)
+                  .denoise(monoDenoise)
+                  .stdDevFactor(1.0)
+                  .fovRads(Units.degreesToRadians(90.0))
                   .build()
             };
         default -> new CameraConfig[] {};
@@ -69,7 +96,8 @@ public class VisionConstants {
       int exposure,
       double gain,
       double denoise,
-      double stdDevFactor) {}
+      double stdDevFactor,
+      double fovRads) {}
 
   private VisionConstants() {}
 }

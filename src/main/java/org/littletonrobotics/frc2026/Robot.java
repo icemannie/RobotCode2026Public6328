@@ -11,6 +11,8 @@ import edu.wpi.first.hal.AllianceStationID;
 import edu.wpi.first.math.MathShared;
 import edu.wpi.first.math.MathSharedStore;
 import edu.wpi.first.math.MathUsageId;
+import edu.wpi.first.math.geometry.Pose3d;
+import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
 import edu.wpi.first.wpilibj.DriverStation;
@@ -201,6 +203,10 @@ public class Robot extends LoggedRobot {
     FullSubsystem.runAllPeriodicAfterScheduler();
     LoggedTracer.record("Robot/AfterScheduler");
 
+    // Clear old fuel
+    ObjectDetection.getInstance().clearOldFuelPoses();
+    LoggedTracer.record("ObjectDetection/ClearOldFuelPoses");
+
     // Print auto duration
     if (autonomousCommand != null) {
       if (!autonomousCommand.isScheduled() && !autoMessagePrinted) {
@@ -231,6 +237,19 @@ public class Robot extends LoggedRobot {
 
     // Log Mechanism3d data
     CompBotMechanism3d.getMeasured().log("Mechanism3d");
+
+    // Log fuel state
+    Logger.recordOutput(
+        "ObjectDetection/FuelTranslations",
+        ObjectDetection.getInstance().getFuelTranslations().stream()
+            .map(
+                (translation) ->
+                    new Pose3d(
+                        translation.getX(),
+                        translation.getY(),
+                        FieldConstants.fuelDiameter / 2.0,
+                        Rotation3d.kZero))
+            .toArray(Pose3d[]::new));
 
     // Log hub state
     Logger.recordOutput("HubShift/Official", HubShiftUtil.getOfficialShiftInfo());

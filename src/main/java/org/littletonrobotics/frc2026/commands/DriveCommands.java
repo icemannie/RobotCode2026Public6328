@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj2.command.Commands;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.function.DoubleSupplier;
+import org.littletonrobotics.frc2026.FieldConstants;
 import org.littletonrobotics.frc2026.RobotState;
 import org.littletonrobotics.frc2026.subsystems.drive.Drive;
 import org.littletonrobotics.frc2026.subsystems.drive.DriveConstants;
@@ -145,9 +146,10 @@ public class DriveCommands {
           double maxLinearVelocityMagnitude = Double.POSITIVE_INFINITY;
           double robotAngle =
               Math.abs(
-                  parameters
-                      .driveAngleNoLookahead()
-                      .minus(fieldRelativeLinearVelocity.getAngle().plus(Rotation2d.kPi))
+                  AllianceFlipUtil.apply(FieldConstants.Hub.topCenterPoint.toTranslation2d())
+                      .minus(RobotState.getInstance().getEstimatedPose().getTranslation())
+                      .getAngle()
+                      .minus(fieldRelativeLinearVelocity.getAngle())
                       .getRadians());
           double robotHubDistance =
               LaunchCalculator.getInstance().getParameters().distanceNoLookahead();
