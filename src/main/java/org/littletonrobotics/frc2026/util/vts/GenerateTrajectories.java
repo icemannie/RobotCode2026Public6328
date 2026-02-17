@@ -378,9 +378,11 @@ public class GenerateTrajectories {
                                                 pathWaypoint.translation.getY() + " m",
                                                 pathWaypoint.translation.getY()))
                                         .heading(
-                                            new ExpVal(
-                                                pathWaypoint.rotation.getRadians() + " rad",
-                                                pathWaypoint.rotation.getRadians()))
+                                            pathWaypoint.rotation == null
+                                                ? new ExpVal("0 rad", 0)
+                                                : new ExpVal(
+                                                    pathWaypoint.rotation.getRadians() + " rad",
+                                                    pathWaypoint.rotation.getRadians()))
                                         .intervals(
                                             pathWaypoint.intervals > 0
                                                 ? pathWaypoint.intervals

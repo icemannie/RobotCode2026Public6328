@@ -17,11 +17,13 @@ import edu.wpi.first.math.kinematics.SwerveDriveKinematics;
 import edu.wpi.first.math.kinematics.SwerveModulePosition;
 import edu.wpi.first.math.numbers.N1;
 import edu.wpi.first.math.numbers.N3;
+import edu.wpi.first.wpilibj.Timer;
 import java.util.*;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.frc2026.subsystems.drive.DriveConstants;
+import org.littletonrobotics.frc2026.subsystems.slamtake.Slamtake;
 import org.littletonrobotics.frc2026.util.geometry.GeomUtil;
 import org.littletonrobotics.junction.AutoLogOutput;
 
@@ -31,6 +33,7 @@ public class RobotState {
   private static final double poseBufferSizeSec = 2.0;
   private static final Matrix<N3, N1> odometryStateStdDevs =
       new Matrix<>(VecBuilder.fill(0.003, 0.003, 0.002));
+  private static final double slamtakePosePersistanceTime = 2.0;
 
   // MARK: - Class fields
 
@@ -43,6 +46,7 @@ public class RobotState {
   private final TimeInterpolatableBuffer<Rotation3d> rotationBuffer =
       TimeInterpolatableBuffer.createBuffer(poseBufferSizeSec);
   private final Matrix<N3, N1> qStdDevs = new Matrix<>(Nat.N3(), Nat.N1());
+  private final TreeMap<Double, Slamtake.SlamState> slamtakeTreeMap = new TreeMap<>();
 
   // Odometry fields
   private final SwerveDriveKinematics kinematics;
@@ -92,6 +96,12 @@ public class RobotState {
 
   public ChassisSpeeds getFieldVelocity() {
     return ChassisSpeeds.fromRobotRelativeSpeeds(robotVelocity, getRotation());
+  }
+
+  @AutoLogOutput
+  public Optional<Slamtake.SlamState> getSlamtakePose(double timestamp) {
+    Map.Entry<Double, Slamtake.SlamState> floorEntry = slamtakeTreeMap.floorEntry(timestamp);
+    return Optional.ofNullable(floorEntry.getValue());
   }
 
   /** Returns the estimated pose of the near part of the intake. */
@@ -210,6 +220,15 @@ public class RobotState {
     estimatedPose = estimateAtTime.plus(scaledTransform).plus(sampleToOdometryTransform);
   }
 
+  public void addSlamtakeObservation(SlamtakeObservation observation) {
+    slamtakeTreeMap.put(observation.timestamp, observation.state);
+
+    // Remove old observations
+    while (slamtakeTreeMap.firstKey() < (Timer.getFPGATimestamp() - slamtakePosePersistanceTime)) {
+      slamtakeTreeMap.pollFirstEntry();
+    }
+  }
+
   public Optional<Pose2d> getEstimatedPoseAtTimestamp(double timestamp) {
     var oldOdometryPose = poseBuffer.getSample(timestamp);
     if (oldOdometryPose.isEmpty()) {
@@ -238,4 +257,6 @@ public class RobotState {
       Optional<Rotation2d> yaw) {}
 
   public record VisionObservation(double timestamp, Pose3d visionPose, Matrix<N3, N1> stdDevs) {}
+
+  public record SlamtakeObservation(double timestamp, Slamtake.SlamState state) {}
 }

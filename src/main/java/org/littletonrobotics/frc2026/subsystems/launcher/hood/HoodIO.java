@@ -13,9 +13,10 @@ public interface HoodIO {
 
   @AutoLog
   public static class HoodIOInputs {
-    // TODO: add encoder
     boolean motorConnected = false;
+    boolean encoderConnected = false;
     double positionRads = 0.0;
+    double absolutePositionRads = 0.0;
     double velocityRadsPerSec = 0.0;
     double appliedVolts = 0.0;
     double supplyCurrentAmps = 0.0;

@@ -11,6 +11,7 @@ import choreo.Choreo;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.math.system.plant.DCMotor;
 import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.Alert.AlertType;
@@ -34,7 +35,6 @@ import org.littletonrobotics.frc2026.subsystems.drive.GyroIO;
 import org.littletonrobotics.frc2026.subsystems.drive.ModuleIO;
 import org.littletonrobotics.frc2026.subsystems.drive.ModuleIOSim;
 import org.littletonrobotics.frc2026.subsystems.hopper.Hopper;
-import org.littletonrobotics.frc2026.subsystems.intake.Intake;
 import org.littletonrobotics.frc2026.subsystems.kicker.Kicker;
 import org.littletonrobotics.frc2026.subsystems.launcher.LaunchCalculator;
 import org.littletonrobotics.frc2026.subsystems.launcher.flywheel.Flywheel;
@@ -45,7 +45,13 @@ import org.littletonrobotics.frc2026.subsystems.leds.Leds;
 import org.littletonrobotics.frc2026.subsystems.leds.LedsIO;
 import org.littletonrobotics.frc2026.subsystems.leds.LedsIOHAL;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO;
+import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIOSim;
 import org.littletonrobotics.frc2026.subsystems.sensors.FuelSensorIO;
+import org.littletonrobotics.frc2026.subsystems.slamtake.SlamIO;
+import org.littletonrobotics.frc2026.subsystems.slamtake.SlamIOSim;
+import org.littletonrobotics.frc2026.subsystems.slamtake.Slamtake;
+import org.littletonrobotics.frc2026.subsystems.slamtake.Slamtake.IntakeGoal;
+import org.littletonrobotics.frc2026.subsystems.slamtake.Slamtake.SlamGoal;
 import org.littletonrobotics.frc2026.subsystems.vision.Vision;
 import org.littletonrobotics.frc2026.subsystems.vision.VisionIO;
 import org.littletonrobotics.frc2026.util.HubShiftUtil;
@@ -60,7 +66,7 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 public class RobotContainer {
   // Subsystems
   private Drive drive;
-  private Intake intake;
+  private Slamtake slamtake;
   private Hopper hopper;
   private Kicker kicker;
   private Hood hood;
@@ -111,6 +117,9 @@ public class RobotContainer {
                   new ModuleIOSim(1),
                   new ModuleIOSim(2),
                   new ModuleIOSim(3));
+          slamtake =
+              new Slamtake(
+                  new SlamIOSim(), new RollerSystemIOSim(DCMotor.getKrakenX60Foc(1), 1.0, 0.005));
           leds = new Leds(new LedsIOHAL());
           break;
       }
@@ -126,8 +135,8 @@ public class RobotContainer {
               new ModuleIO() {},
               new ModuleIO() {});
     }
-    if (intake == null) {
-      intake = new Intake(new RollerSystemIO() {});
+    if (slamtake == null) {
+      slamtake = new Slamtake(new SlamIO() {}, new RollerSystemIO() {});
     }
     if (hopper == null) {
       hopper = new Hopper(new RollerSystemIO() {}, new FuelSensorIO() {}, new FuelSensorIO() {});
@@ -177,11 +186,17 @@ public class RobotContainer {
     // Set default commands
     hood.setDefaultCommand(hood.runTrackTargetCommand());
     flywheel.setDefaultCommand(flywheel.runTrackTargetCommand());
-    intake.setDefaultCommand(
+    slamtake.setDefaultCommand(
         Commands.startEnd(
-            () -> intake.setGoal(Intake.Goal.INTAKE),
-            () -> intake.setGoal(Intake.Goal.STOP),
-            intake));
+            () -> {
+              slamtake.setIntakeGoal(IntakeGoal.INTAKE);
+              slamtake.setSlamGoal(SlamGoal.DEPLOY);
+            },
+            () -> {
+              slamtake.setIntakeGoal(IntakeGoal.STOP);
+              slamtake.setSlamGoal(SlamGoal.IDLE);
+            },
+            slamtake));
   }
 
   /** Create the bindings between buttons and commands. */
@@ -193,15 +208,14 @@ public class RobotContainer {
     drive.setDefaultCommand(DriveCommands.joystickDrive(drive, driverX, driverY, driverOmega));
 
     // ***** PRIMARY CONTROLLER *****
-    primary.x().onTrue(hood.zeroCommand());
     primary
         .rightTrigger()
         .whileTrue(
             Commands.parallel(
                     Commands.startEnd(
-                        () -> intake.setGoal(Intake.Goal.OUTTAKE),
-                        () -> intake.setGoal(Intake.Goal.STOP),
-                        intake),
+                        () -> slamtake.setIntakeGoal(IntakeGoal.OUTTAKE),
+                        () -> slamtake.setIntakeGoal(IntakeGoal.STOP),
+                        slamtake),
                     Commands.startEnd(
                         () -> hopper.setGoal(Hopper.Goal.OUTTAKE),
                         () -> hopper.setGoal(Hopper.Goal.STOP),
@@ -243,6 +257,12 @@ public class RobotContainer {
     //             () -> kicker.setGoal(Kicker.Goal.STOP),
     //             kicker)
     //         .withTimeout(0.5));
+
+    // Deploy intake
+    primary.povUp().toggleOnTrue(Commands.runOnce(() -> slamtake.setSlamGoal(SlamGoal.DEPLOY)));
+
+    // Retract intake
+    primary.povDown().toggleOnTrue(Commands.runOnce(() -> slamtake.setSlamGoal(SlamGoal.RETRACT)));
 
     // ***** SECONDARY CONTROLLER *****
 

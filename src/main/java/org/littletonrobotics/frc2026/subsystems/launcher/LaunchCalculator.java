@@ -154,23 +154,13 @@ public class LaunchCalculator {
       lookaheadLauncherToTargetDistance = target.getDistance(lookaheadPose.getTranslation());
     }
 
-    // Account for launcher being off-center
+    // Account for launcher being off center
     Pose2d lookaheadRobotPose =
         lookaheadPose.transformBy(robotToLauncher.toTransform2d().inverse());
-    Rotation2d fieldToHubAngle = target.minus(lookaheadRobotPose.getTranslation()).getAngle();
-    Rotation2d hubAngle =
-        new Rotation2d(
-            Math.asin(
-                MathUtil.clamp(
-                    robotToLauncher.getTranslation().getY()
-                        / target.getDistance(lookaheadRobotPose.getTranslation()),
-                    -1.0,
-                    1.0)));
-    Rotation2d driveAngle =
-        fieldToHubAngle.plus(hubAngle).plus(robotToLauncher.getRotation().toRotation2d());
+    Rotation2d driveAngle = getDriveAngleWithLauncherOffset(lookaheadRobotPose, target);
 
+    // Calculate remaining parameters
     double hoodAngle = hoodAngleMap.get(lookaheadLauncherToTargetDistance).getRadians();
-
     if (lastDriveAngle == null) lastDriveAngle = driveAngle;
     if (Double.isNaN(lastHoodAngle)) lastHoodAngle = hoodAngle;
     double hoodVelocity =
@@ -180,6 +170,8 @@ public class LaunchCalculator {
         driveAngleFilter.calculate(
             driveAngle.minus(lastDriveAngle).getRadians() / Constants.loopPeriodSecs);
     lastDriveAngle = driveAngle;
+
+    // Constructor parameters
     latestParameters =
         new LaunchingParameters(
             lookaheadLauncherToTargetDistance >= minDistance
@@ -201,11 +193,42 @@ public class LaunchCalculator {
     return latestParameters;
   }
 
+  private static Rotation2d getDriveAngleWithLauncherOffset(
+      Pose2d robotPose, Translation2d target) {
+    Rotation2d fieldToHubAngle = target.minus(robotPose.getTranslation()).getAngle();
+    Rotation2d hubAngle =
+        new Rotation2d(
+            Math.asin(
+                MathUtil.clamp(
+                    robotToLauncher.getTranslation().getY()
+                        / target.getDistance(robotPose.getTranslation()),
+                    -1.0,
+                    1.0)));
+    Rotation2d driveAngle =
+        fieldToHubAngle.plus(hubAngle).plus(robotToLauncher.getRotation().toRotation2d());
+    return driveAngle;
+  }
+
   public double getNaiveTOF(double distance) {
     return timeOfFlightMap.get(distance);
   }
 
   public void clearLaunchingParameters() {
     latestParameters = null;
+  }
+
+  /**
+   * Returns the Pose2d that correctly aims the robot at the goal for a given robot translation.
+   *
+   * @param robotTranslation The translation of the center of the robot.
+   * @return The target pose for the aimed robot.
+   */
+  public static Pose2d getStationaryAimedPose(Translation2d robotTranslation) {
+    // Calculate target
+    Translation2d target =
+        AllianceFlipUtil.apply(FieldConstants.Hub.topCenterPoint.toTranslation2d());
+
+    return new Pose2d(
+        robotTranslation, getDriveAngleWithLauncherOffset(robotTranslation.toPose2d(), target));
   }
 }

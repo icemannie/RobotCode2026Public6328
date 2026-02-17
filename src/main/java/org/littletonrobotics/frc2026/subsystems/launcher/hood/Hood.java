@@ -53,13 +53,15 @@ public class Hood extends FullSubsystem {
   private final Alert motorDisconnectedAlert =
       new Alert("Hood motor disconnected!", Alert.AlertType.kWarning);
 
+  private final Debouncer encoderConnectedDebouncer =
+      new Debouncer(0.5, Debouncer.DebounceType.kFalling);
+  private final Alert encoderDisconnectedAlert =
+      new Alert("Hood encoder disconnected!", Alert.AlertType.kWarning);
+
   @Setter private BooleanSupplier coastOverride = () -> false;
 
   private double goalAngle = 0.0;
   private double goalVelocity = 0.0;
-
-  private static double hoodOffset = 0.0;
-  private boolean hoodZeroed = false;
 
   public Hood(HoodIO io) {
     this.io = io;
@@ -71,9 +73,12 @@ public class Hood extends FullSubsystem {
 
     motorDisconnectedAlert.set(
         Robot.showHardwareAlerts() && !motorConnectedDebouncer.calculate(inputs.motorConnected));
+    encoderDisconnectedAlert.set(
+        Robot.showHardwareAlerts()
+            && !encoderConnectedDebouncer.calculate(inputs.encoderConnected));
 
     // Stop when disabled
-    if (DriverStation.isDisabled() || !hoodZeroed) {
+    if (DriverStation.isDisabled()) {
       outputs.mode = HoodIOOutputMode.BRAKE;
 
       if (coastOverride.getAsBoolean()) {
@@ -94,8 +99,8 @@ public class Hood extends FullSubsystem {
 
   @Override
   public void periodicAfterScheduler() {
-    if (DriverStation.isEnabled() && hoodZeroed) {
-      outputs.positionRad = MathUtil.clamp(goalAngle, minAngle, maxAngle) - hoodOffset;
+    if (DriverStation.isEnabled()) {
+      outputs.positionRad = MathUtil.clamp(goalAngle, minAngle, maxAngle);
       outputs.velocityRadsPerSec = goalVelocity;
       outputs.mode = HoodIOOutputMode.CLOSED_LOOP;
 
@@ -115,20 +120,14 @@ public class Hood extends FullSubsystem {
 
   @AutoLogOutput(key = "Hood/MeasuredAngleRads")
   public double getMeasuredAngleRad() {
-    return inputs.positionRads + hoodOffset;
+    return inputs.absolutePositionRads;
   }
 
   @AutoLogOutput
   public boolean atGoal() {
     return DriverStation.isEnabled()
-        && hoodZeroed
         && Math.abs(getMeasuredAngleRad() - goalAngle)
             <= Units.degreesToRadians(toleranceDeg.get());
-  }
-
-  private void zero() {
-    hoodOffset = minAngle - inputs.positionRads;
-    hoodZeroed = true;
   }
 
   public Command runTrackTargetCommand() {
@@ -141,9 +140,5 @@ public class Hood extends FullSubsystem {
 
   public Command runFixedCommand(DoubleSupplier angle, DoubleSupplier velocity) {
     return run(() -> setGoalParams(angle.getAsDouble(), velocity.getAsDouble()));
-  }
-
-  public Command zeroCommand() {
-    return runOnce(this::zero).ignoringDisable(true);
   }
 }
