@@ -142,36 +142,39 @@ public class DriveCommands {
             fieldRelativeLinearVelocity = fieldRelativeLinearVelocity.times(-1.0);
           }
 
-          // Calculate max linear velocity magnitude based on the max polar velocity
-          double maxLinearVelocityMagnitude = Double.POSITIVE_INFINITY;
-          double robotAngle =
-              Math.abs(
-                  AllianceFlipUtil.apply(FieldConstants.Hub.topCenterPoint.toTranslation2d())
-                      .minus(RobotState.getInstance().getEstimatedPose().getTranslation())
-                      .getAngle()
-                      .minus(fieldRelativeLinearVelocity.getAngle())
-                      .getRadians());
-          double robotHubDistance =
-              LaunchCalculator.getInstance().getParameters().distanceNoLookahead();
-          double hubAngle =
-              driveLaunchMaxPolarVelocityRadPerSec.get()
-                  * LaunchCalculator.getInstance().getNaiveTOF(robotHubDistance);
-          double lookaheadAngle = Math.PI - robotAngle - hubAngle;
+          // Only limit if launching, not passing
+          if (!LaunchCalculator.getInstance().getParameters().passing()) {
+            // Calculate max linear velocity magnitude based on the max polar velocity
+            double maxLinearVelocityMagnitude = Double.POSITIVE_INFINITY;
+            double robotAngle =
+                Math.abs(
+                    AllianceFlipUtil.apply(FieldConstants.Hub.topCenterPoint.toTranslation2d())
+                        .minus(RobotState.getInstance().getEstimatedPose().getTranslation())
+                        .getAngle()
+                        .minus(fieldRelativeLinearVelocity.getAngle())
+                        .getRadians());
+            double robotHubDistance =
+                LaunchCalculator.getInstance().getParameters().distanceNoLookahead();
+            double hubAngle =
+                driveLaunchMaxPolarVelocityRadPerSec.get()
+                    * LaunchCalculator.getInstance().getNaiveTOF(robotHubDistance);
+            double lookaheadAngle = Math.PI - robotAngle - hubAngle;
 
-          // Calculate limit if triangle is valid (otherwise no limit)
-          if (lookaheadAngle > 0) {
-            double robotLookaheadDistance =
-                robotHubDistance * Math.sin(hubAngle) / Math.sin(lookaheadAngle);
-            maxLinearVelocityMagnitude =
-                robotLookaheadDistance
-                    / LaunchCalculator.getInstance().getNaiveTOF(robotHubDistance);
-          }
+            // Calculate limit if triangle is valid (otherwise no limit)
+            if (lookaheadAngle > 0) {
+              double robotLookaheadDistance =
+                  robotHubDistance * Math.sin(hubAngle) / Math.sin(lookaheadAngle);
+              maxLinearVelocityMagnitude =
+                  robotLookaheadDistance
+                      / LaunchCalculator.getInstance().getNaiveTOF(robotHubDistance);
+            }
 
-          // Apply limit to velocity
-          if (fieldRelativeLinearVelocity.getNorm() > maxLinearVelocityMagnitude) {
-            fieldRelativeLinearVelocity =
-                fieldRelativeLinearVelocity.times(
-                    maxLinearVelocityMagnitude / fieldRelativeLinearVelocity.getNorm());
+            // Apply limit to velocity
+            if (fieldRelativeLinearVelocity.getNorm() > maxLinearVelocityMagnitude) {
+              fieldRelativeLinearVelocity =
+                  fieldRelativeLinearVelocity.times(
+                      maxLinearVelocityMagnitude / fieldRelativeLinearVelocity.getNorm());
+            }
           }
 
           // Apply chassis speeds
