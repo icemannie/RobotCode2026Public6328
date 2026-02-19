@@ -320,7 +320,10 @@ public class FieldConstants {
 
   public enum AprilTagLayoutType {
     OFFICIAL("2026-official"),
-    NONE("2026-none");
+    NONE("2026-none"),
+    HUB("2026-hub"),
+    OUTPOST("2026-outpost"),
+    TOWER("2026-tower");
 
     private final String name;
     private volatile AprilTagFieldLayout layout;

@@ -20,6 +20,7 @@ import edu.wpi.first.math.interpolation.InterpolatingTreeMap;
 import edu.wpi.first.math.interpolation.InverseInterpolator;
 import edu.wpi.first.math.kinematics.ChassisSpeeds;
 import edu.wpi.first.math.util.Units;
+import lombok.Getter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.frc2026.Constants;
 import org.littletonrobotics.frc2026.FieldConstants;
@@ -33,6 +34,8 @@ import org.littletonrobotics.junction.Logger;
 @ExtensionMethod({GeomUtil.class})
 public class LaunchCalculator {
   private static LaunchCalculator instance;
+
+  @Getter private double hoodAngleOffsetDeg = 0.0;
 
   private final LinearFilter hoodAngleFilter =
       LinearFilter.movingAverage((int) (0.1 / Constants.loopPeriodSecs));
@@ -250,7 +253,7 @@ public class LaunchCalculator {
                     <= (passing ? passingMaxDistance : maxDistance),
             driveAngle,
             driveVelocity,
-            hoodAngle,
+            hoodAngle + Units.degreesToRadians(hoodAngleOffsetDeg),
             hoodVelocity,
             passing
                 ? passingFlywheelSpeedMap.get(lookaheadLauncherToTargetDistance)
@@ -334,5 +337,10 @@ public class LaunchCalculator {
 
     return new Pose2d(
         robotTranslation, getDriveAngleWithLauncherOffset(robotTranslation.toPose2d(), target));
+  }
+
+  /** Adjusts the hood angle offset up or down the specified amount. */
+  public void incrementHoodAngleOffset(double incrementDegrees) {
+    hoodAngleOffsetDeg += incrementDegrees;
   }
 }

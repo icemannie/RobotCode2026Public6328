@@ -7,8 +7,12 @@
 
 package org.littletonrobotics.frc2026.subsystems.kicker;
 
+import edu.wpi.first.wpilibj.Timer;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.Setter;
+import org.littletonrobotics.frc2026.Constants;
+import org.littletonrobotics.frc2026.RobotContainer.SimFuelCount;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystem;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO;
 import org.littletonrobotics.frc2026.util.FullSubsystem;
@@ -28,11 +32,16 @@ public class Kicker extends FullSubsystem {
   private static final LoggedTunableNumber kV = new LoggedTunableNumber("Kicker/kV", 0.0185);
 
   private final RollerSystem roller;
+  private final Optional<SimFuelCount> simFuelCount;
 
   @Getter @Setter @AutoLogOutput private Goal goal = Goal.STOP;
+  private Goal lastGoal = Goal.STOP;
 
-  public Kicker(RollerSystemIO rollerIO) {
+  private Timer launchTimer = new Timer();
+
+  public Kicker(RollerSystemIO rollerIO, Optional<SimFuelCount> simFuelCount) {
     this.roller = new RollerSystem("Kicker roller", "Kicker", rollerIO);
+    this.simFuelCount = simFuelCount;
   }
 
   public void periodic() {
@@ -49,7 +58,6 @@ public class Kicker extends FullSubsystem {
       case LAUNCH -> {
         roller.runClosedLoop(rollerIntakeSpeed.get());
       }
-
       case OUTTAKE -> {
         roller.runClosedLoop(rollerOuttakeSetpoint.get());
       }
@@ -57,6 +65,20 @@ public class Kicker extends FullSubsystem {
         roller.runOpenLoop(0.0);
       }
     }
+
+    if (Constants.getMode() == Constants.Mode.SIM
+        && goal == Goal.LAUNCH
+        && simFuelCount.isPresent()) {
+      if (lastGoal != Goal.LAUNCH) {
+        launchTimer.restart();
+      } else if (launchTimer.advanceIfElapsed(1.0 / SimFuelCount.getLaunchBPS())
+          && simFuelCount.get().getFuelStored() > 0) {
+        simFuelCount.get().setFuelStored(Math.max(0, simFuelCount.get().getFuelStored() - 1));
+      }
+    }
+
+    lastGoal = goal;
+
     LoggedTracer.record("Kicker/Periodic");
   }
 

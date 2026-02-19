@@ -10,9 +10,12 @@ package org.littletonrobotics.frc2026.subsystems.hopper;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.filter.MedianFilter;
+import java.util.Optional;
 import lombok.Getter;
 import lombok.Setter;
 import org.littletonrobotics.frc2026.Constants;
+import org.littletonrobotics.frc2026.Constants.Mode;
+import org.littletonrobotics.frc2026.RobotContainer.SimFuelCount;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystem;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO;
 import org.littletonrobotics.frc2026.subsystems.sensors.FuelSensorIO;
@@ -53,14 +56,20 @@ public class Hopper extends FullSubsystem {
   private final FuelSensorIOInputsAutoLogged sensorLeftInputs = new FuelSensorIOInputsAutoLogged();
   private final FuelSensorIOInputsAutoLogged sensorRightInputs = new FuelSensorIOInputsAutoLogged();
 
+  private final Optional<SimFuelCount> simFuelCount;
+
   @Getter @Setter @AutoLogOutput private Goal goal = Goal.STOP;
   @Getter @AutoLogOutput private HopperLevel hopperLevel = HopperLevel.EMPTY;
 
   public Hopper(
-      RollerSystemIO rollerIO, FuelSensorIO fuelSensorIOLeft, FuelSensorIO fuelSensorIORight) {
+      RollerSystemIO rollerIO,
+      FuelSensorIO fuelSensorIOLeft,
+      FuelSensorIO fuelSensorIORight,
+      Optional<SimFuelCount> simFuelCount) {
     this.roller = new RollerSystem("Hopper roller", "Hopper/Roller", rollerIO);
     this.sensorLeft = fuelSensorIOLeft;
     this.sensorRight = fuelSensorIORight;
+    this.simFuelCount = simFuelCount;
   }
 
   public void periodic() {
@@ -83,14 +92,29 @@ public class Hopper extends FullSubsystem {
     Logger.recordOutput("Hopper/LaserCan/FiltererdMaxDepth", filteredMaxDepth);
 
     // Debouncer filtered depth
-    for (int i = 0; i < hopperDepths.length - 1; i++) {
-      if (filteredMaxDepth < hopperDepths[i] && filteredMaxDepth >= hopperDepths[i + 1]) {
-        if (debouncers[i].calculate(true)) {
-          hopperLevel = HopperLevel.values()[i];
-        }
-        for (int d = 0; d < debouncers.length; d++) {
-          if (d != i) {
-            debouncers[d].calculate(false);
+    if (Constants.getMode() == Mode.SIM && simFuelCount.isPresent()) {
+      double fuelPercent = (double) simFuelCount.get().getFuelStored() / SimFuelCount.getCapacity();
+      if (simFuelCount.get().getFuelStored() == 0) {
+        hopperLevel = HopperLevel.EMPTY;
+      } else if (fuelPercent <= 0.25) {
+        hopperLevel = HopperLevel.FULL_0_25;
+      } else if (fuelPercent <= 0.5) {
+        hopperLevel = HopperLevel.FULL_25_50;
+      } else if (fuelPercent <= 0.75) {
+        hopperLevel = HopperLevel.FULL_50_75;
+      } else {
+        hopperLevel = HopperLevel.FULL_75_100;
+      }
+    } else {
+      for (int i = 0; i < hopperDepths.length - 1; i++) {
+        if (filteredMaxDepth < hopperDepths[i] && filteredMaxDepth >= hopperDepths[i + 1]) {
+          if (debouncers[i].calculate(true)) {
+            hopperLevel = HopperLevel.values()[i];
+          }
+          for (int d = 0; d < debouncers.length; d++) {
+            if (d != i) {
+              debouncers[d].calculate(false);
+            }
           }
         }
       }
@@ -109,6 +133,11 @@ public class Hopper extends FullSubsystem {
         rollerVolts = 0.0;
       }
     }
+
+    if (simFuelCount.isPresent()) {
+      Logger.recordOutput("Hopper/SimFuelStored", simFuelCount.get().getFuelStored());
+    }
+
     roller.runOpenLoop(rollerVolts);
     LoggedTracer.record("Hopper/Periodic");
   }

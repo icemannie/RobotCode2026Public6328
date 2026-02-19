@@ -15,16 +15,17 @@ import edu.wpi.first.math.geometry.Rotation3d;
 import edu.wpi.first.math.geometry.Transform2d;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.math.util.Units;
-import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Timer;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
+import lombok.Setter;
 import lombok.experimental.ExtensionMethod;
 import org.littletonrobotics.frc2026.subsystems.drive.DriveConstants;
 import org.littletonrobotics.frc2026.subsystems.vision.VisionConstants;
 import org.littletonrobotics.frc2026.util.EqualsUtil;
+import org.littletonrobotics.frc2026.util.FuelSim;
 import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.frc2026.util.geometry.GeomUtil;
 
@@ -43,6 +44,7 @@ public class ObjectDetection {
   private static final double maxPossibleFuel = 504;
 
   private static ObjectDetection instance;
+  @Setter private static FuelSim fuelSim;
 
   public static ObjectDetection getInstance() {
     if (instance == null) instance = new ObjectDetection();
@@ -170,11 +172,7 @@ public class ObjectDetection {
 
   public Set<Translation2d> getFuelTranslations() {
     if (Constants.getMode() == Constants.Mode.SIM) {
-      if (DriverStation.isAutonomousEnabled()) {
-        return Set.of();
-      } else {
-        return Set.of();
-      }
+      return fuelSim.getFuels();
     }
     return fuelPoses.stream().map(FuelPoseRecord::translation).collect(Collectors.toSet());
   }

@@ -22,6 +22,7 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.Watchdog;
 import edu.wpi.first.wpilibj.simulation.DriverStationSim;
 import edu.wpi.first.wpilibj.simulation.RoboRioSim;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
 import java.lang.reflect.Field;
@@ -55,6 +56,7 @@ public class Robot extends LoggedRobot {
   private boolean autoMessagePrinted;
   private RobotContainer robotContainer;
 
+  private final Timer fuelLoggingTimer = new Timer();
   private final Timer disabledTimer = new Timer();
   private final Alert lowBatteryAlert =
       new Alert(
@@ -238,29 +240,41 @@ public class Robot extends LoggedRobot {
     // Log Mechanism3d data
     CompBotMechanism3d.getMeasured().log("Mechanism3d");
 
+    // Update fuel sim
+    if (Constants.getMode() == Mode.SIM) {
+      robotContainer.updateFuelSim();
+    }
+
     // Log fuel state
-    Logger.recordOutput(
-        "ObjectDetection/FuelTranslations",
-        ObjectDetection.getInstance().getFuelTranslations().stream()
-            .map(
-                (translation) ->
-                    new Pose3d(
-                        translation.getX(),
-                        translation.getY(),
-                        FieldConstants.fuelDiameter / 2.0,
-                        Rotation3d.kZero))
-            .toArray(Pose3d[]::new));
+    fuelLoggingTimer.start();
+    if (fuelLoggingTimer.advanceIfElapsed(0.05)) {
+      Logger.recordOutput(
+          "ObjectDetection/FuelTranslations",
+          ObjectDetection.getInstance().getFuelTranslations().stream()
+              .map(
+                  (translation) ->
+                      new Pose3d(
+                          translation.getX(),
+                          translation.getY(),
+                          FieldConstants.fuelDiameter / 2.0,
+                          Rotation3d.kZero))
+              .toArray(Pose3d[]::new));
+    }
 
     // Log hub state
     Logger.recordOutput("HubShift/Official", HubShiftUtil.getOfficialShiftInfo());
     Logger.recordOutput("HubShift/Shifted", HubShiftUtil.getShiftedShiftInfo());
 
     // Log launching parameters
+    var launchCalculator = LaunchCalculator.getInstance();
+    Logger.recordOutput("LaunchCalculator/Parameters", launchCalculator.getParameters());
     Logger.recordOutput(
-        "LaunchCalculator/Parameters", LaunchCalculator.getInstance().getParameters());
+        "LaunchCalculator/HoodAngleOffsetDeg", launchCalculator.getHoodAngleOffsetDeg());
+    SmartDashboard.putString(
+        "Hood Angle Offset", String.format("%.1f", launchCalculator.getHoodAngleOffsetDeg()));
 
     // Clear launching parameters
-    LaunchCalculator.getInstance().clearLaunchingParameters();
+    launchCalculator.clearLaunchingParameters();
 
     // Record cycle time
     LoggedTracer.record("Robot/Periodic");
