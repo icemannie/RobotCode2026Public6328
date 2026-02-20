@@ -16,8 +16,11 @@ import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.util.Color;
 import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import org.littletonrobotics.frc2026.subsystems.hopper.Hopper.HopperLevel;
 import org.littletonrobotics.frc2026.subsystems.leds.LedsIO.LedsIOOutputs;
+import org.littletonrobotics.frc2026.util.HubShiftUtil;
 import org.littletonrobotics.frc2026.util.LoggedTracer;
 import org.littletonrobotics.frc2026.util.VirtualSubsystem;
 import org.littletonrobotics.junction.Logger;
@@ -33,9 +36,19 @@ public class Leds extends VirtualSubsystem {
   public boolean lowBatteryAlert = false;
   public boolean superstructureCoast = false;
   private boolean estopped = false;
+  public boolean inLaunchingTolerance = false;
+  public HopperLevel hopperLevel = HopperLevel.EMPTY;
   private Optional<Alliance> alliance = Optional.empty();
-  private Color disabledColor = Color.kGold;
-  private Color secondaryDisabledColor = Color.kDarkBlue;
+
+  // Constants
+  public double shiftNearEndTime = 5.0;
+  private static final Map<HopperLevel, Color> hopperLevelMap =
+      Map.of(
+          HopperLevel.EMPTY, Color.kBlack,
+          HopperLevel.FULL_0_25, Color.kPurple,
+          HopperLevel.FULL_25_50, Color.kBlue,
+          HopperLevel.FULL_50_75, Color.kCyan,
+          HopperLevel.FULL_75_100, Color.kGreen);
 
   private final LedsIO io;
   private final LedsIOInputsAutoLogged inputs = new LedsIOInputsAutoLogged();
@@ -67,11 +80,6 @@ public class Leds extends VirtualSubsystem {
     // Update alliance color
     if (DriverStation.isFMSAttached()) {
       alliance = DriverStation.getAlliance();
-      disabledColor =
-          alliance
-              .map(alliance -> alliance == Alliance.Blue ? Color.kBlue : Color.kRed)
-              .orElse(disabledColor);
-      secondaryDisabledColor = alliance.isPresent() ? Color.kBlack : secondaryDisabledColor;
     }
 
     // Update estop state
@@ -114,17 +122,43 @@ public class Leds extends VirtualSubsystem {
             5.0);
       } else {
         // Default pattern
-        wave(
-            fullSection,
-            disabledColor,
-            secondaryDisabledColor,
-            waveDisabledCycleLength,
-            waveDisabledDuration);
+        if (alliance.isEmpty()) {
+          wave(
+              fullSection,
+              Color.kGold,
+              Color.kDarkBlue,
+              waveDisabledCycleLength,
+              waveDisabledDuration);
+        } else {
+          Alliance allianceValue = alliance.get();
+          wave(
+              fullSection,
+              allianceValue.equals(Alliance.Blue) ? Color.kBlue : Color.kRed,
+              Color.kBlack,
+              waveDisabledCycleLength,
+              waveDisabledDuration);
+        }
       }
     } else if (DriverStation.isAutonomous()) {
       wave(fullSection, Color.kGold, Color.kDarkBlue, waveFastCycleLength, waveFastDuration);
     } else {
-      // Not implemented
+      if (!(DriverStation.getGameSpecificMessage().length() > 0)
+          && HubShiftUtil.getAllianceWinOverride().isEmpty()) {
+        strobe(fullSection, Color.kWhite, Color.kRed, .1);
+      } else if (HubShiftUtil.getShiftedShiftInfo().remainingTime() <= shiftNearEndTime) {
+        wave(
+            fullSection,
+            Color.kWhite,
+            DriverStation.getAlliance().orElse(Alliance.Blue).equals(Alliance.Blue)
+                ? Color.kBlue
+                : Color.kRed,
+            waveFastCycleLength,
+            waveFastDuration);
+      } else if (inLaunchingTolerance) {
+        wave(fullSection, Color.kGreen, Color.kWhite, waveFastCycleLength, waveFastDuration);
+      } else {
+        solid(fullSection, hopperLevelMap.get(hopperLevel));
+      }
     }
 
     // Override with loading animation

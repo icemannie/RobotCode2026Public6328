@@ -13,10 +13,9 @@ public interface HoodIO {
 
   @AutoLog
   public static class HoodIOInputs {
+    // TODO: add encoder
     boolean motorConnected = false;
-    boolean encoderConnected = false;
     double positionRads = 0.0;
-    double absolutePositionRads = 0.0;
     double velocityRadsPerSec = 0.0;
     double appliedVolts = 0.0;
     double supplyCurrentAmps = 0.0;
@@ -27,7 +26,8 @@ public interface HoodIO {
   public static enum HoodIOOutputMode {
     BRAKE,
     COAST,
-    CLOSED_LOOP
+    CLOSED_LOOP,
+    OPEN_LOOP
   }
 
   public static class HoodIOOutputs {
@@ -38,6 +38,9 @@ public interface HoodIO {
     public double velocityRadsPerSec = 0.0;
     public double kP = 0.0;
     public double kD = 0.0;
+
+    // Open loop control for homing
+    public double appliedVolts = 0.0;
   }
 
   public default void updateInputs(HoodIOInputs inputs) {}

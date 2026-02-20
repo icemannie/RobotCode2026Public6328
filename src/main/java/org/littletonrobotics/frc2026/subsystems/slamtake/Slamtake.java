@@ -10,6 +10,7 @@ package org.littletonrobotics.frc2026.subsystems.slamtake;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.wpilibj.Timer;
+import java.util.function.BooleanSupplier;
 import lombok.Getter;
 import lombok.Setter;
 import org.littletonrobotics.frc2026.RobotState;
@@ -107,6 +108,11 @@ public class Slamtake extends FullSubsystem {
     slam.periodicAfterScheduler();
 
     LoggedTracer.record("Slamtake/AfterScheduler");
+  }
+
+  public void setCoastOverride(BooleanSupplier coast) {
+    slam.setCoastOverride(coast);
+    roller.setCoastOverride(coast);
   }
 
   public enum IntakeGoal {

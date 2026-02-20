@@ -21,6 +21,7 @@ import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import org.littletonrobotics.frc2026.FieldConstants;
 import org.littletonrobotics.frc2026.RobotState;
@@ -88,19 +89,22 @@ public class DriveCommands {
       Drive drive,
       DoubleSupplier xSupplier,
       DoubleSupplier ySupplier,
-      DoubleSupplier omegaSupplier) {
+      DoubleSupplier omegaSupplier,
+      BooleanSupplier robotRelative) {
     return Commands.run(
         () -> {
           ChassisSpeeds speeds =
               getSpeedsFromJoysticks(
                   xSupplier.getAsDouble(), ySupplier.getAsDouble(), omegaSupplier.getAsDouble());
           drive.runVelocity(
-              ChassisSpeeds.fromFieldRelativeSpeeds(
-                  speeds,
-                  DriverStation.getAlliance().isPresent()
-                          && DriverStation.getAlliance().get() == Alliance.Red
-                      ? RobotState.getInstance().getRotation().plus(Rotation2d.kPi)
-                      : RobotState.getInstance().getRotation()));
+              robotRelative.getAsBoolean()
+                  ? speeds
+                  : ChassisSpeeds.fromFieldRelativeSpeeds(
+                      speeds,
+                      DriverStation.getAlliance().isPresent()
+                              && DriverStation.getAlliance().get() == Alliance.Red
+                          ? RobotState.getInstance().getRotation().plus(Rotation2d.kPi)
+                          : RobotState.getInstance().getRotation()));
         },
         drive);
   }

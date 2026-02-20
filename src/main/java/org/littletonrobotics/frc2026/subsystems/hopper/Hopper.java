@@ -10,12 +10,15 @@ package org.littletonrobotics.frc2026.subsystems.hopper;
 import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.filter.MedianFilter;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import lombok.Getter;
 import lombok.Setter;
 import org.littletonrobotics.frc2026.Constants;
 import org.littletonrobotics.frc2026.Constants.Mode;
 import org.littletonrobotics.frc2026.RobotContainer.SimFuelCount;
+import org.littletonrobotics.frc2026.subsystems.leds.Leds;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystem;
 import org.littletonrobotics.frc2026.subsystems.rollers.RollerSystemIO;
 import org.littletonrobotics.frc2026.subsystems.sensors.FuelSensorIO;
@@ -56,6 +59,7 @@ public class Hopper extends FullSubsystem {
   private final FuelSensorIOInputsAutoLogged sensorLeftInputs = new FuelSensorIOInputsAutoLogged();
   private final FuelSensorIOInputsAutoLogged sensorRightInputs = new FuelSensorIOInputsAutoLogged();
 
+  @Setter private BooleanSupplier coastOverride = () -> false;
   private final Optional<SimFuelCount> simFuelCount;
 
   @Getter @Setter @AutoLogOutput private Goal goal = Goal.STOP;
@@ -70,6 +74,7 @@ public class Hopper extends FullSubsystem {
     this.sensorLeft = fuelSensorIOLeft;
     this.sensorRight = fuelSensorIORight;
     this.simFuelCount = simFuelCount;
+    roller.setCoastOverride(coastOverride);
   }
 
   public void periodic() {
@@ -79,9 +84,10 @@ public class Hopper extends FullSubsystem {
     Logger.processInputs("Hopper/Sensors/RightSensor", sensorRightInputs);
     roller.periodic();
 
+    // Update hopper level
     if (sensorLeftInputs.valid && !sensorRightInputs.valid) {
       maxRawDepth = sensorLeftInputs.distanceMeters;
-    } else if (sensorLeftInputs.valid && !sensorRightInputs.valid) {
+    } else if (!sensorLeftInputs.valid && sensorRightInputs.valid) {
       maxRawDepth = sensorRightInputs.distanceMeters;
     } else if (sensorLeftInputs.valid && sensorRightInputs.valid) {
       maxRawDepth = Math.max(sensorLeftInputs.distanceMeters, sensorRightInputs.distanceMeters);
@@ -89,7 +95,7 @@ public class Hopper extends FullSubsystem {
 
     double filteredMaxDepth = fuelFilter.calculate(maxRawDepth);
     Logger.recordOutput("Hopper/LaserCan/MaxRawDepth", maxRawDepth);
-    Logger.recordOutput("Hopper/LaserCan/FiltererdMaxDepth", filteredMaxDepth);
+    Logger.recordOutput("Hopper/LaserCan/FilteredMaxDepth", filteredMaxDepth);
 
     // Debouncer filtered depth
     if (Constants.getMode() == Mode.SIM && simFuelCount.isPresent()) {
@@ -120,8 +126,15 @@ public class Hopper extends FullSubsystem {
       }
     }
 
-    double rollerVolts = 0.0;
+    // Send hopper level
+    Leds.getGlobal().hopperLevel = hopperLevel;
+    SmartDashboard.putString("Hopper Level", hopperLevel.toString());
+    if (simFuelCount.isPresent()) {
+      Logger.recordOutput("Hopper/SimFuelStored", simFuelCount.get().getFuelStored());
+    }
 
+    // Update roller output
+    double rollerVolts = 0.0;
     switch (goal) {
       case LAUNCH -> {
         rollerVolts = rollerLaunchVolts.get();
@@ -132,10 +145,6 @@ public class Hopper extends FullSubsystem {
       case STOP -> {
         rollerVolts = 0.0;
       }
-    }
-
-    if (simFuelCount.isPresent()) {
-      Logger.recordOutput("Hopper/SimFuelStored", simFuelCount.get().getFuelStored());
     }
 
     roller.runOpenLoop(rollerVolts);

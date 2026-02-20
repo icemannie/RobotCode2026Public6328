@@ -26,6 +26,8 @@ import org.littletonrobotics.frc2026.Constants;
 import org.littletonrobotics.frc2026.FieldConstants;
 import org.littletonrobotics.frc2026.RobotState;
 import org.littletonrobotics.frc2026.subsystems.drive.DriveConstants;
+import org.littletonrobotics.frc2026.subsystems.launcher.hood.Hood;
+import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.frc2026.util.geometry.AllianceFlipUtil;
 import org.littletonrobotics.frc2026.util.geometry.Bounds;
 import org.littletonrobotics.frc2026.util.geometry.GeomUtil;
@@ -70,6 +72,37 @@ public class LaunchCalculator {
   private static final double passingMinDistance;
   private static final double passingMaxDistance;
   private static final double phaseDelay;
+
+  // Presets
+  public static final LaunchPreset bump =
+      new LaunchPreset(
+          new LoggedTunableNumber("LaunchCalculator/Presets/Bump/HoodAngle", 0.0),
+          new LoggedTunableNumber("LaunchCalculator/Presets/Bump/FlywheelSpeed", 0.0));
+  public static final LaunchPreset tower =
+      new LaunchPreset(
+          new LoggedTunableNumber("LaunchCalculator/Presets/Tower/HoodAngle", 0.0),
+          new LoggedTunableNumber("LaunchCalculator/Presets/Tower/FlywheelSpeed", 0.0));
+  public static final LaunchPreset trench =
+      new LaunchPreset(
+          new LoggedTunableNumber("LaunchCalculator/Presets/Trench/HoodAngle", 0.0),
+          new LoggedTunableNumber("LaunchCalculator/Presets/Trench/FlywheelSpeed", 0.0));
+  public static final LaunchPreset outpost =
+      new LaunchPreset(
+          new LoggedTunableNumber("LaunchCalculator/Presets/Outpost/HoodAngle", 0.0),
+          new LoggedTunableNumber("LaunchCalculator/Presets/Outpost/FlywheelSpeed", 0.0));
+  public static final LaunchPreset hoodMin =
+      new LaunchPreset(
+          new LoggedTunableNumber(
+              "LaunchCalculator/Presets/HoodMin/HoodAngle", Units.radiansToDegrees(Hood.minAngle)),
+          new LoggedTunableNumber("LaunchCalculator/Presets/HoodMin/FlywheelSpeed", 100));
+  public static final LaunchPreset hoodMax =
+      new LaunchPreset(
+          new LoggedTunableNumber(
+              "LaunchCalculator/Presets/HoodMax/HoodAngle", Units.radiansToDegrees(Hood.maxAngle)),
+          new LoggedTunableNumber("LaunchCalculator/Presets/HoodMax/FlywheelSpeed", 100));
+
+  public static record LaunchPreset(
+      LoggedTunableNumber hoodAngleDeg, LoggedTunableNumber flywheelSpeed) {}
 
   // Launching Maps
   private static final InterpolatingTreeMap<Double, Rotation2d> hoodAngleMap =

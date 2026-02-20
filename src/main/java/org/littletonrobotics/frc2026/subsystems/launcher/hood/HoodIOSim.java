@@ -17,24 +17,34 @@ public class HoodIOSim implements HoodIO {
   private static final DCMotor motorModel = DCMotor.getKrakenX44(1);
   private final SingleJointedArmSim sim =
       new SingleJointedArmSim(
-          motorModel, 1.0, .004, .33, 0.0, Units.degreesToRadians(45), false, 0, null);
+          motorModel,
+          1.0,
+          .004,
+          .33,
+          Units.degreesToRadians(19),
+          Units.degreesToRadians(45),
+          false,
+          Units.degreesToRadians(19));
 
   private double currentOutput = 0.0;
   private double appliedVolts = 0.0;
   private boolean currentControl = false;
+
+  private static final double kP = 30000;
+  private static final double kD = 500;
 
   public HoodIOSim() {}
 
   @Override
   public void updateInputs(HoodIOInputs inputs) {
     if (currentControl) {
-      appliedVolts = motorModel.getVoltage(currentOutput, sim.getVelocityRadPerSec());
-    } else {
-      appliedVolts = 0.0;
+      appliedVolts =
+          MathUtil.clamp(
+              motorModel.getVoltage(currentOutput, sim.getVelocityRadPerSec()), -12.0, 12.0);
     }
 
     // Update sim state
-    sim.setInputVoltage(MathUtil.clamp(appliedVolts, -12.0, 12.0));
+    sim.setInputVoltage(appliedVolts);
     sim.update(Constants.loopPeriodSecs);
 
     inputs.motorConnected = true;
@@ -50,6 +60,7 @@ public class HoodIOSim implements HoodIO {
   public void applyOutputs(HoodIOOutputs outputs) {
     switch (outputs.mode) {
       case BRAKE -> {
+        appliedVolts = 0.0;
         currentControl = false;
       }
       case COAST -> {
@@ -58,9 +69,13 @@ public class HoodIOSim implements HoodIO {
       }
       case CLOSED_LOOP -> {
         currentOutput =
-            (sim.getAngleRads() - outputs.positionRad) * outputs.kP
-                + (sim.getVelocityRadPerSec() - outputs.velocityRadsPerSec) * outputs.kD;
+            (outputs.positionRad - sim.getAngleRads()) * kP
+                + (outputs.velocityRadsPerSec - sim.getVelocityRadPerSec()) * kD;
         currentControl = true;
+      }
+      case OPEN_LOOP -> {
+        appliedVolts = outputs.appliedVolts;
+        currentControl = false;
       }
     }
   }

@@ -9,6 +9,7 @@ package org.littletonrobotics.frc2026.subsystems.kicker;
 
 import edu.wpi.first.wpilibj.Timer;
 import java.util.Optional;
+import java.util.function.BooleanSupplier;
 import lombok.Getter;
 import lombok.Setter;
 import org.littletonrobotics.frc2026.Constants;
@@ -34,6 +35,8 @@ public class Kicker extends FullSubsystem {
   private final RollerSystem roller;
   private final Optional<SimFuelCount> simFuelCount;
 
+  @Setter private BooleanSupplier coastOverride = () -> false;
+
   @Getter @Setter @AutoLogOutput private Goal goal = Goal.STOP;
   private Goal lastGoal = Goal.STOP;
 
@@ -42,6 +45,7 @@ public class Kicker extends FullSubsystem {
   public Kicker(RollerSystemIO rollerIO, Optional<SimFuelCount> simFuelCount) {
     this.roller = new RollerSystem("Kicker roller", "Kicker", rollerIO);
     this.simFuelCount = simFuelCount;
+    roller.setCoastOverride(coastOverride);
   }
 
   public void periodic() {

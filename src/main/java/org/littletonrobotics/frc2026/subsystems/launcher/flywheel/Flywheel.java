@@ -24,7 +24,6 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Flywheel extends FullSubsystem {
-  private final String name;
   private final FlywheelIO io;
   private final FlywheelIOInputsAutoLogged inputs = new FlywheelIOInputsAutoLogged();
   private final FlywheelIOOutputs outputs = new FlywheelIOOutputs();
@@ -52,8 +51,7 @@ public class Flywheel extends FullSubsystem {
   @AutoLogOutput(key = "Flywheel/AtGoal")
   private boolean atGoal = false;
 
-  public Flywheel(String name, FlywheelIO io) {
-    this.name = name;
+  public Flywheel(FlywheelIO io) {
     this.io = io;
 
     disconnected = new Alert("Flywheel motor disconnected!", Alert.AlertType.kWarning);
@@ -67,7 +65,7 @@ public class Flywheel extends FullSubsystem {
 
   public void periodic() {
     io.updateInputs(inputs);
-    Logger.processInputs(name, inputs);
+    Logger.processInputs("Flywheel", inputs);
 
     outputs.kP = kP.get();
     outputs.kD = kD.get();
@@ -89,7 +87,7 @@ public class Flywheel extends FullSubsystem {
 
   @Override
   public void periodicAfterScheduler() {
-    Logger.recordOutput(name + "/Mode", outputs.mode);
+    Logger.recordOutput("Flywheel/Mode", outputs.mode);
     io.applyOutputs(outputs);
 
     LoggedTracer.record("Flywheel/AfterScheduler");
@@ -101,7 +99,7 @@ public class Flywheel extends FullSubsystem {
     outputs.velocityRadsPerSec = velocityRadsPerSec;
     outputs.feedforward =
         Math.signum(velocityRadsPerSec) * kS.get() + velocityRadsPerSec * kV.get();
-    Logger.recordOutput(name + "/Setpoint", velocityRadsPerSec);
+    Logger.recordOutput("Flywheel/Setpoint", velocityRadsPerSec);
   }
 
   /** Stops the flywheel. */

@@ -14,6 +14,7 @@ import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
+import edu.wpi.first.wpilibj2.command.Commands;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
 import lombok.Setter;
@@ -29,13 +30,18 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Hood extends FullSubsystem {
-  private static final double minAngle = Units.degreesToRadians(15);
-  private static final double maxAngle = Units.degreesToRadians(45);
+  public static final double minAngle = Units.degreesToRadians(15);
+  public static final double maxAngle = Units.degreesToRadians(45);
 
   private static final LoggedTunableNumber kP = new LoggedTunableNumber("Hood/kP");
   private static final LoggedTunableNumber kD = new LoggedTunableNumber("Hood/kD");
   private static final LoggedTunableNumber toleranceDeg =
       new LoggedTunableNumber("Hood/ToleranceDeg");
+
+  private static final LoggedTunableNumber homingVolts =
+      new LoggedTunableNumber("Hood/Homing/Volts", -2);
+  private static final LoggedTunableNumber homingVelocityThreshold =
+      new LoggedTunableNumber("Hood/Homing/VelocityThreshold", 0.05);
 
   static {
     kP.initDefault(30000);
@@ -53,15 +59,13 @@ public class Hood extends FullSubsystem {
   private final Alert motorDisconnectedAlert =
       new Alert("Hood motor disconnected!", Alert.AlertType.kWarning);
 
-  private final Debouncer encoderConnectedDebouncer =
-      new Debouncer(0.5, Debouncer.DebounceType.kFalling);
-  private final Alert encoderDisconnectedAlert =
-      new Alert("Hood encoder disconnected!", Alert.AlertType.kWarning);
-
   @Setter private BooleanSupplier coastOverride = () -> false;
 
   private double goalAngle = 0.0;
   private double goalVelocity = 0.0;
+
+  private static double hoodOffset = 0.0;
+  private boolean hoodZeroed = false;
 
   public Hood(HoodIO io) {
     this.io = io;
@@ -73,12 +77,9 @@ public class Hood extends FullSubsystem {
 
     motorDisconnectedAlert.set(
         Robot.showHardwareAlerts() && !motorConnectedDebouncer.calculate(inputs.motorConnected));
-    encoderDisconnectedAlert.set(
-        Robot.showHardwareAlerts()
-            && !encoderConnectedDebouncer.calculate(inputs.encoderConnected));
 
     // Stop when disabled
-    if (DriverStation.isDisabled()) {
+    if (DriverStation.isDisabled() || !hoodZeroed) {
       outputs.mode = HoodIOOutputMode.BRAKE;
 
       if (coastOverride.getAsBoolean()) {
@@ -99,8 +100,8 @@ public class Hood extends FullSubsystem {
 
   @Override
   public void periodicAfterScheduler() {
-    if (DriverStation.isEnabled()) {
-      outputs.positionRad = MathUtil.clamp(goalAngle, minAngle, maxAngle);
+    if (DriverStation.isEnabled() && hoodZeroed) {
+      outputs.positionRad = MathUtil.clamp(goalAngle, minAngle, maxAngle) - hoodOffset;
       outputs.velocityRadsPerSec = goalVelocity;
       outputs.mode = HoodIOOutputMode.CLOSED_LOOP;
 
@@ -120,14 +121,38 @@ public class Hood extends FullSubsystem {
 
   @AutoLogOutput(key = "Hood/MeasuredAngleRads")
   public double getMeasuredAngleRad() {
-    return inputs.absolutePositionRads;
+    return inputs.positionRads + hoodOffset;
   }
 
   @AutoLogOutput
   public boolean atGoal() {
     return DriverStation.isEnabled()
+        && hoodZeroed
         && Math.abs(getMeasuredAngleRad() - goalAngle)
             <= Units.degreesToRadians(toleranceDeg.get());
+  }
+
+  private void zero() {
+    hoodOffset = minAngle - inputs.positionRads;
+    hoodZeroed = true;
+  }
+
+  public Command zeroCommand() {
+    return run(() -> {
+          outputs.appliedVolts = homingVolts.get();
+          outputs.mode = HoodIOOutputMode.OPEN_LOOP;
+        })
+        .raceWith(
+            Commands.waitSeconds(0.5)
+                .andThen(
+                    Commands.waitUntil(
+                        () ->
+                            Math.abs(inputs.velocityRadsPerSec) <= homingVelocityThreshold.get())))
+        .andThen(this::zero);
+  }
+
+  public Command forceZeroCommand() {
+    return runOnce(this::zero).ignoringDisable(true);
   }
 
   public Command runTrackTargetCommand() {

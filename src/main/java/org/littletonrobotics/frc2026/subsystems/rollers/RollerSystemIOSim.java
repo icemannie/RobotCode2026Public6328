@@ -18,11 +18,13 @@ public class RollerSystemIOSim implements RollerSystemIO {
   private final DCMotorSim sim;
   private final DCMotor gearbox;
   private double appliedVoltage = 0.0;
+  private boolean hasFollower;
 
-  public RollerSystemIOSim(DCMotor motorModel, double reduction, double moi) {
+  public RollerSystemIOSim(DCMotor motorModel, double reduction, double moi, boolean hasFollower) {
     gearbox = motorModel;
     sim =
         new DCMotorSim(LinearSystemId.createDCMotorSystem(motorModel, moi, reduction), motorModel);
+    this.hasFollower = hasFollower;
   }
 
   @Override
@@ -30,6 +32,10 @@ public class RollerSystemIOSim implements RollerSystemIO {
     sim.update(Constants.loopPeriodSecs);
 
     inputs.connected = true;
+    if (hasFollower) {
+      inputs.followerConnected = true;
+      inputs.hasFollower = true;
+    }
     inputs.positionRads = sim.getAngularPositionRad();
     inputs.velocityRadsPerSec = sim.getAngularVelocityRadPerSec();
     inputs.appliedVoltage = appliedVoltage;

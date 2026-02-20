@@ -35,7 +35,31 @@ public class VisionConstants {
 
   public static CameraConfig[] cameras =
       switch (Constants.robot) {
-        case COMPBOT -> new CameraConfig[] {};
+        case COMPBOT ->
+            new CameraConfig[] {
+              CameraConfig.builder()
+                  .poseFunction(
+                      (Double timestamp) -> {
+                        return Optional.of(
+                            new Pose3d(
+                                Units.inchesToMeters(-10.343),
+                                Units.inchesToMeters(-8.102),
+                                Units.inchesToMeters(20.940),
+                                new Rotation3d(
+                                    0.0,
+                                    Units.degreesToRadians(-22.5),
+                                    Units.degreesToRadians(175.0))));
+                      })
+                  .id("40552080")
+                  .width(1800)
+                  .height(1200)
+                  .exposure(monoExposure)
+                  .gain(monoGain)
+                  .denoise(monoDenoise)
+                  .stdDevFactor(1.0)
+                  .fovRads(Units.degreesToRadians(75.0))
+                  .build()
+            };
         case ALPHABOT ->
             new CameraConfig[] {
               CameraConfig.builder()
