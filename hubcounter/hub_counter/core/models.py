@@ -10,6 +10,7 @@ class BallCounts:
 
     channels: list[int] = field(default_factory=lambda: [0, 0, 0, 0])
     total: int = 0
+    paused_total: int = 0
 
     def __post_init__(self):
         """Ensure channels list has 4 elements."""
@@ -19,12 +20,15 @@ class BallCounts:
 
     def to_dict(self) -> dict:
         """Convert to dictionary for JSON serialization."""
-        return {"channels": self.channels.copy(), "total": self.total}
+        return {"channels": self.channels.copy(), "total": self.total, "paused_total": self.paused_total}
 
     @classmethod
     def from_dict(cls, data: dict) -> "BallCounts":
         """Create from dictionary."""
-        return cls(channels=data.get("channels", [0, 0, 0, 0]))
+        return cls(
+            channels=data.get("channels", [0, 0, 0, 0]),
+            paused_total=data.get("paused_total", 0),
+        )
 
 
 @dataclass

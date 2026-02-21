@@ -131,6 +131,29 @@ main {
     margin-top: 0.5rem;
 }
 
+#paused-count-display {
+    margin-top: 0.75rem;
+}
+
+.paused-badge {
+    display: inline-block;
+    background: #ff8800;
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    padding: 0.2rem 0.6rem;
+    border-radius: 4px;
+    margin-right: 0.5rem;
+    vertical-align: middle;
+}
+
+.paused-count-label {
+    font-size: 1rem;
+    color: var(--text-secondary);
+    vertical-align: middle;
+}
+
 /* External Control Banner */
 .external-banner {
     display: flex;

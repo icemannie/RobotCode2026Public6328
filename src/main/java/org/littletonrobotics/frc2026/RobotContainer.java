@@ -8,6 +8,7 @@
 package org.littletonrobotics.frc2026;
 
 import choreo.Choreo;
+import edu.wpi.first.math.filter.Debouncer.DebounceType;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.math.system.plant.DCMotor;
@@ -28,20 +29,25 @@ import edu.wpi.first.wpilibj2.command.button.RobotModeTriggers;
 import edu.wpi.first.wpilibj2.command.button.Trigger;
 import java.io.File;
 import java.lang.reflect.Method;
+import java.util.List;
 import java.util.Optional;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.experimental.ExtensionMethod;
+import org.littletonrobotics.frc2026.AutoSelector.AutoQuestion;
+import org.littletonrobotics.frc2026.AutoSelector.AutoQuestionResponse;
 import org.littletonrobotics.frc2026.Constants.Mode;
 import org.littletonrobotics.frc2026.FieldConstants.AprilTagLayoutType;
 import org.littletonrobotics.frc2026.commands.DriveCommands;
+import org.littletonrobotics.frc2026.commands.auto.AutoBuilder;
 import org.littletonrobotics.frc2026.subsystems.drive.Drive;
 import org.littletonrobotics.frc2026.subsystems.drive.DriveConstants;
 import org.littletonrobotics.frc2026.subsystems.drive.GyroIO;
 import org.littletonrobotics.frc2026.subsystems.drive.ModuleIO;
 import org.littletonrobotics.frc2026.subsystems.drive.ModuleIOSim;
 import org.littletonrobotics.frc2026.subsystems.hopper.Hopper;
+import org.littletonrobotics.frc2026.subsystems.hubcounter.HubCounter;
 import org.littletonrobotics.frc2026.subsystems.kicker.Kicker;
 import org.littletonrobotics.frc2026.subsystems.launcher.LaunchCalculator;
 import org.littletonrobotics.frc2026.subsystems.launcher.flywheel.Flywheel;
@@ -81,6 +87,7 @@ public class RobotContainer {
   private Flywheel flywheel;
   private Vision vision;
   private Leds leds;
+  private HubCounter hubCounter = new HubCounter();
 
   // Controllers
   private final RazerWolverineController primary = new RazerWolverineController(0);
@@ -110,7 +117,7 @@ public class RobotContainer {
   private final Alert aprilTagLayoutAlert = new Alert("", AlertType.kInfo);
 
   // Dashboard inputs
-  private final LoggedDashboardChooser<Command> autoChooser;
+  AutoSelector autoSelector = new AutoSelector("Auto");
   private final LoggedDashboardChooser<AprilTagLayoutType> aprilTagLayoutChooser;
 
   private boolean coastOverride = false;
@@ -227,12 +234,6 @@ public class RobotContainer {
       DriverStation.reportWarning("Failed to set Choreo directory.", false);
     }
 
-    // Set up auto routines
-    autoChooser = new LoggedDashboardChooser<>("Auto Choices");
-    autoChooser.addDefaultOption("Do Nothing", Commands.none());
-    autoChooser.addOption(
-        "Drive Wheel Radius Characterization", DriveCommands.wheelRadiusCharacterization(drive));
-
     // Set up AprilTag layout type
     aprilTagLayoutChooser = new LoggedDashboardChooser<>("AprilTag Layout");
     aprilTagLayoutChooser.addDefaultOption("Official", FieldConstants.defaultAprilTagType);
@@ -257,14 +258,68 @@ public class RobotContainer {
           return Optional.empty();
         });
 
-    // Configure the button bindings
+    // Configure the autos and button bindings
+    configureAutos();
     configureButtonBindings();
 
     // Set default commands
     hood.setDefaultCommand(hood.runTrackTargetCommand());
     flywheel.setDefaultCommand(
         new ContinuousConditionalCommand(
-            flywheel.stopCommand(), flywheel.runTrackTargetCommand(), disableAutoSpinup));
+            flywheel.stopCommand(), flywheel.runFixedCommand(() -> 120.0), disableAutoSpinup));
+  }
+
+  private void configureAutos() {
+    AutoBuilder autoBuilder =
+        new AutoBuilder(
+            drive, slamtake, hopper, kicker, hood, flywheel, autoSelector::getResponses);
+
+    // // Home Depot Salesman
+    // autoSelector.addRoutine(
+    //     "Home Depot Salesman",
+    //     List.of(
+    //         new AutoQuestion("Through Tower?", List.of(AutoQuestionResponse.NO)),
+    //         new AutoQuestion("Post-Launch?", List.of(AutoQuestionResponse.NOTHING))),
+    //     autoBuilder.homeDepotSalesman());
+
+    // // Lowe's Hardware Salesman
+    // autoSelector.addRoutine(
+    //     "Lowe's Hardware Salesman",
+    //     List.of(
+    //         new AutoQuestion("Through Tower?", List.of(AutoQuestionResponse.NO)),
+    //         new AutoQuestion("Post-Launch?", List.of(AutoQuestionResponse.NOTHING))),
+    //     autoBuilder.lowesHardwareSalesman());
+
+    // Monopoly Salesman
+    autoSelector.addRoutine(
+        "Monopoly Salesman",
+        List.of(
+            new AutoQuestion(
+                "Start Location?",
+                List.of(
+                    AutoQuestionResponse.LEFT_TRENCH,
+                    AutoQuestionResponse.LEFT_BUMP,
+                    AutoQuestionResponse.RIGHT_BUMP,
+                    AutoQuestionResponse.RIGHT_TRENCH))),
+        autoBuilder.monopolySalesman());
+
+    // Timid Salesman
+    autoSelector.addRoutine(
+        "Timid Salesman",
+        List.of(
+            new AutoQuestion(
+                "Start Location?",
+                List.of(
+                    AutoQuestionResponse.LEFT_TRENCH,
+                    AutoQuestionResponse.LEFT_BUMP,
+                    AutoQuestionResponse.CENTER,
+                    AutoQuestionResponse.RIGHT_BUMP,
+                    AutoQuestionResponse.RIGHT_TRENCH))),
+        autoBuilder.timidSalesman());
+
+    // Characterization
+    autoSelector.addRoutine(
+        "Discombobulated Salesman", DriveCommands.wheelRadiusCharacterization(drive));
   }
 
   /** Create the bindings between buttons and commands. */
@@ -286,9 +341,10 @@ public class RobotContainer {
     primary
         .leftBumper()
         .whileTrue(DriveCommands.joystickDriveWhileLaunching(drive, driverX, driverY))
+        .whileTrue(flywheel.runTrackTargetCommand())
         .and(() -> LaunchCalculator.getInstance().getParameters().isValid())
-        .and(inLaunchingTolerance)
         .and(() -> ignoreHubState.getAsBoolean() || hubActive.getAsBoolean())
+        .and(inLaunchingTolerance.debounce(0.25, DebounceType.kFalling))
         .whileTrue(
             Commands.parallel(
                 Commands.startEnd(
@@ -320,6 +376,7 @@ public class RobotContainer {
     // Force launch (no tolerance checking)
     primary
         .rightBumper()
+        .or(secondary.rightBumper())
         .whileTrue(
             Commands.parallel(
                     Commands.startEnd(
@@ -370,10 +427,12 @@ public class RobotContainer {
         .a()
         .whileTrue(
             flywheel
-                .runFixedCommand(LaunchCalculator.outpost.flywheelSpeed())
+                .runFixedCommand(LaunchCalculator.outpostPreset.flywheelSpeed())
                 .alongWith(
                     hood.runFixedCommand(
-                        () -> Units.degreesToRadians(LaunchCalculator.outpost.hoodAngleDeg().get()),
+                        () ->
+                            Units.degreesToRadians(
+                                LaunchCalculator.outpostPreset.hoodAngleDeg().get()),
                         () -> 0.0)));
 
     // Tower preset
@@ -381,10 +440,12 @@ public class RobotContainer {
         .b()
         .whileTrue(
             flywheel
-                .runFixedCommand(LaunchCalculator.tower.flywheelSpeed())
+                .runFixedCommand(LaunchCalculator.towerPreset.flywheelSpeed())
                 .alongWith(
                     hood.runFixedCommand(
-                        () -> Units.degreesToRadians(LaunchCalculator.tower.hoodAngleDeg().get()),
+                        () ->
+                            Units.degreesToRadians(
+                                LaunchCalculator.towerPreset.hoodAngleDeg().get()),
                         () -> 0.0)));
 
     // Trench preset
@@ -392,28 +453,40 @@ public class RobotContainer {
         .x()
         .whileTrue(
             flywheel
-                .runFixedCommand(LaunchCalculator.trench.flywheelSpeed())
+                .runFixedCommand(LaunchCalculator.trenchPreset.flywheelSpeed())
                 .alongWith(
                     hood.runFixedCommand(
-                        () -> Units.degreesToRadians(LaunchCalculator.trench.hoodAngleDeg().get()),
+                        () ->
+                            Units.degreesToRadians(
+                                LaunchCalculator.trenchPreset.hoodAngleDeg().get()),
                         () -> 0.0)));
 
-    // Bump preset
+    // Hub preset
     primary
         .y()
         .whileTrue(
             flywheel
-                .runFixedCommand(LaunchCalculator.bump.flywheelSpeed())
+                .runFixedCommand(LaunchCalculator.hubPreset.flywheelSpeed())
                 .alongWith(
                     hood.runFixedCommand(
-                        () -> Units.degreesToRadians(LaunchCalculator.bump.hoodAngleDeg().get()),
+                        () ->
+                            Units.degreesToRadians(LaunchCalculator.hubPreset.hoodAngleDeg().get()),
                         () -> 0.0)));
 
     // Deploy intake
     primary.povUp().onTrue(Commands.runOnce(() -> slamtake.setSlamGoal(SlamGoal.DEPLOY)));
 
     // Retract intake
-    primary.povDown().onTrue(Commands.runOnce(() -> slamtake.setSlamGoal(SlamGoal.RETRACT)));
+    primary
+        .povDown()
+        .or(primary.lowerRightPaddle())
+        .onTrue(Commands.runOnce(() -> slamtake.setSlamGoal(SlamGoal.RETRACT)))
+        .onTrue(
+            Commands.runEnd(
+                    () -> slamtake.setIntakeGoal(IntakeGoal.INTAKE),
+                    () -> slamtake.setIntakeGoal(IntakeGoal.STOP),
+                    slamtake)
+                .withTimeout(1.0));
 
     // Run intake
     primary
@@ -422,7 +495,8 @@ public class RobotContainer {
             Commands.runEnd(
                 () -> slamtake.setIntakeGoal(IntakeGoal.INTAKE),
                 () -> slamtake.setIntakeGoal(IntakeGoal.STOP),
-                slamtake));
+                slamtake))
+        .onTrue(Commands.runOnce(() -> slamtake.setSlamGoal(SlamGoal.DEPLOY)));
 
     // ***** SECONDARY CONTROLLER *****
 
@@ -446,10 +520,12 @@ public class RobotContainer {
         .a()
         .whileTrue(
             flywheel
-                .runFixedCommand(LaunchCalculator.hoodMin.flywheelSpeed())
+                .runFixedCommand(LaunchCalculator.hoodMinPreset.flywheelSpeed())
                 .alongWith(
                     hood.runFixedCommand(
-                        () -> Units.degreesToRadians(LaunchCalculator.hoodMin.hoodAngleDeg().get()),
+                        () ->
+                            Units.degreesToRadians(
+                                LaunchCalculator.hoodMinPreset.hoodAngleDeg().get()),
                         () -> 0.0)));
 
     // Systems check preset (max hood angle)
@@ -457,17 +533,20 @@ public class RobotContainer {
         .y()
         .whileTrue(
             flywheel
-                .runFixedCommand(LaunchCalculator.hoodMax.flywheelSpeed())
+                .runFixedCommand(LaunchCalculator.hoodMaxPreset.flywheelSpeed())
                 .alongWith(
                     hood.runFixedCommand(
-                        () -> Units.degreesToRadians(LaunchCalculator.hoodMax.hoodAngleDeg().get()),
+                        () ->
+                            Units.degreesToRadians(
+                                LaunchCalculator.hoodMaxPreset.hoodAngleDeg().get()),
                         () -> 0.0)));
 
     // Precision climber control once climber merged in
     // climber.setDutyCycleOut(-secondary.getLeftY());
 
-    // Hood zero command
+    // Hood zero commands
     secondary.x().onTrue(hood.zeroCommand());
+    secondary.b().onTrue(hood.forceZeroCommand());
 
     // Hood angle offset
     secondary
@@ -495,7 +574,7 @@ public class RobotContainer {
 
     // ****** OVERRIDE SWITCHES *****
 
-    // Coast superstructure
+    // Coast override
     coast
         .onTrue(
             Commands.runOnce(
@@ -514,6 +593,17 @@ public class RobotContainer {
                       leds.superstructureCoast = false;
                     })
                 .withName("Superstructure Uncoast")
+                .ignoringDisable(true));
+
+    // Hub counter override
+    ignoreHubState
+        .onTrue(
+            Commands.runOnce(() -> hubCounter.setExternal(true))
+                .withName("Enable External Hub Counter Control")
+                .ignoringDisable(true))
+        .onFalse(
+            Commands.runOnce(() -> hubCounter.setExternal(false))
+                .withName("Disable External Hub Counter Control")
                 .ignoringDisable(true));
 
     // ****** ALERTS ******
@@ -550,6 +640,7 @@ public class RobotContainer {
           new Trigger(() -> (HubShiftUtil.getShiftedShiftInfo().remainingTime() < time));
       shiftAboutToEnd
           .and(RobotModeTriggers.teleop())
+          .and(ignoreHubState.negate())
           .onTrue(
               Commands.runEnd(
                       () -> primary.setRumble(RumbleType.kRightRumble, 1.0),
@@ -568,13 +659,14 @@ public class RobotContainer {
     RobotModeTriggers.disabled()
         .onFalse(Commands.runOnce(() -> slamtake.setSlamGoal(SlamGoal.DEPLOY)));
 
-    // Automatically run intake in auto
+    // Automatically run intake and flywheel in auto
     RobotModeTriggers.autonomous()
         .whileTrue(
             Commands.runEnd(
                 () -> slamtake.setIntakeGoal(IntakeGoal.INTAKE),
                 () -> slamtake.setIntakeGoal(IntakeGoal.STOP),
-                slamtake));
+                slamtake))
+        .whileTrue(flywheel.runTrackTargetCommand());
 
     // Disable coast when enabling
     RobotModeTriggers.disabled()
@@ -587,11 +679,14 @@ public class RobotContainer {
                 .ignoringDisable(true));
 
     // Reset hub shift timer when enabling
-    RobotModeTriggers.teleop().onTrue(Commands.runOnce(() -> HubShiftUtil.initialize()));
-    RobotModeTriggers.autonomous().onTrue(Commands.runOnce(() -> HubShiftUtil.initialize()));
+    RobotModeTriggers.teleop().onTrue(Commands.runOnce(HubShiftUtil::initialize));
+    RobotModeTriggers.autonomous().onTrue(Commands.runOnce(HubShiftUtil::initialize));
+    RobotModeTriggers.disabled()
+        .onTrue(Commands.runOnce(HubShiftUtil::initialize).ignoringDisable(true));
+    RobotModeTriggers.autonomous().onTrue(Commands.runOnce(hubCounter::initialize));
 
     // Force zero hood when starting auto
-    RobotModeTriggers.autonomous().onTrue(Commands.runOnce(hood::forceZeroCommand));
+    RobotModeTriggers.autonomous().onTrue(hood.forceZeroCommand());
   }
 
   private void configureFuelSim() {
@@ -672,6 +767,6 @@ public class RobotContainer {
 
   /** Returns the autonomous command for the Robot class. */
   public Command getAutonomousCommand() {
-    return autoChooser.get();
+    return autoSelector.getCommand();
   }
 }

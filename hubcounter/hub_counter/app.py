@@ -51,6 +51,7 @@ class HubCounterApp:
         self._last_external_pattern = -1
         self._last_external_color = ""
         self._pause_counting = False
+        self._last_pause_counting = False
 
         logger.info("HubCounterApp initialized")
 
@@ -98,7 +99,12 @@ class HubCounterApp:
         """
         # Check if counting is paused (only applies during external control)
         if self._is_external and self._pause_counting:
-            logger.debug(f"Ball detected on channel {channel} but counting is paused")
+            logger.debug(f"Ball detected on channel {channel} but counting is paused — incrementing paused count")
+            counts = self._ball_counter.increment_paused()
+            if self._nt_client:
+                self._nt_client.publish_counts(counts)
+            if self._loop:
+                asyncio.run_coroutine_threadsafe(broadcast_counts(counts), self._loop)
             return
 
         counts = self._ball_counter.increment(channel)
@@ -165,7 +171,7 @@ class HubCounterApp:
                         self._last_external_color = ""
                         logger.info("Entering external control mode")
                         await broadcast_external_state(
-                            True, PATTERN_NAMES.get(pattern, "Unknown"), color_hex
+                            True, PATTERN_NAMES.get(pattern, "Unknown"), color_hex, self._pause_counting
                         )
 
                 # Detect falling edge on robot's IsExternal (true->false)
@@ -178,9 +184,19 @@ class HubCounterApp:
                         self._last_external_pattern = -1
                         self._last_external_color = ""
                         logger.info("Exiting external control mode")
-                        await broadcast_external_state(False, "", "")
+                        await broadcast_external_state(False, "", "", False)
 
                 self._last_robot_external = robot_external
+
+                # Broadcast pause_counting changes while in external mode
+                if self._is_external and self._pause_counting != self._last_pause_counting:
+                    self._last_pause_counting = self._pause_counting
+                    await broadcast_external_state(
+                        True,
+                        PATTERN_NAMES.get(pattern, "Unknown"),
+                        color_hex,
+                        self._pause_counting,
+                    )
 
                 # Apply LED pattern/color if in external mode
                 if self._is_external and self._led_controller and self._loop:
@@ -202,7 +218,7 @@ class HubCounterApp:
                             f"External LED: pattern={PATTERN_NAMES.get(pattern, pattern)}, color={color_hex}"
                         )
                         await broadcast_external_state(
-                            True, PATTERN_NAMES.get(pattern, "Unknown"), color_hex
+                            True, PATTERN_NAMES.get(pattern, "Unknown"), color_hex, self._pause_counting
                         )
 
             except asyncio.CancelledError:
@@ -244,7 +260,7 @@ class HubCounterApp:
         if self._led_controller:
             self._led_controller.stop_pattern()
         logger.info("External control dismissed by user")
-        await broadcast_external_state(False, "", "")
+        await broadcast_external_state(False, "", "", False)
 
     def _save_settings(self, settings: Settings) -> None:
         """Save settings to file.

@@ -42,6 +42,7 @@ class NetworkTablesClient:
 
         self._inst: Optional["ntcore.NetworkTableInstance"] = None
         self._total_count_pub = None
+        self._paused_total_count_pub = None
         self._channel_counts_pub = None
         self._is_external_pub = None
         self._led_pattern_pub = None
@@ -104,14 +105,16 @@ class NetworkTablesClient:
         hub_table = self._inst.getTable("HubCounter")
 
         self._total_count_pub = hub_table.getIntegerTopic("TotalCount").publish()
+        self._paused_total_count_pub = hub_table.getIntegerTopic("PausedTotalCount").publish()
         self._channel_counts_pub = hub_table.getIntegerArrayTopic(
             "ChannelCounts"
         ).publish()
 
         # Publish initial counts so topics appear immediately
         self._total_count_pub.set(0)
+        self._paused_total_count_pub.set(0)
         self._channel_counts_pub.set([0, 0, 0, 0])
-        logger.debug("Publishers created for TotalCount and ChannelCounts with initial values")
+        logger.debug("Publishers created for TotalCount, PausedTotalCount, and ChannelCounts with initial values")
 
         # Create publishers for external control state and publish initial values
         self._is_external_pub = hub_table.getBooleanTopic("IsExternal").publish()
@@ -179,6 +182,8 @@ class NetworkTablesClient:
         # Close publishers
         if self._total_count_pub:
             self._total_count_pub.close()
+        if self._paused_total_count_pub:
+            self._paused_total_count_pub.close()
         if self._channel_counts_pub:
             self._channel_counts_pub.close()
         if self._is_external_pub:
@@ -289,11 +294,13 @@ class NetworkTablesClient:
         try:
             if self._total_count_pub:
                 self._total_count_pub.set(counts.total)
+            if self._paused_total_count_pub:
+                self._paused_total_count_pub.set(counts.paused_total)
             if self._channel_counts_pub:
                 self._channel_counts_pub.set(counts.channels)
 
             is_connected = self._inst.isConnected() if self._inst else False
-            logger.debug(f"Published counts: total={counts.total}, connected={is_connected}")
+            logger.debug(f"Published counts: total={counts.total}, paused_total={counts.paused_total}, connected={is_connected}")
         except Exception as e:
             logger.error(f"Error publishing counts: {e}", exc_info=True)
 

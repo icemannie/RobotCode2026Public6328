@@ -25,13 +25,13 @@ import org.littletonrobotics.junction.AutoLogOutput;
 
 public class Slamtake extends FullSubsystem {
   private static final LoggedTunableNumber rollerIntakeVolts =
-      new LoggedTunableNumber("Slamtake/Roller/IntakeVolts", 12.0);
+      new LoggedTunableNumber("Slamtake/Roller/IntakeVolts", 10.0);
   private static final LoggedTunableNumber rollerOuttakeVolts =
-      new LoggedTunableNumber("Slamtake/Roller/OuttakeVolts", -12.0);
+      new LoggedTunableNumber("Slamtake/Roller/OuttakeVolts", -6.0);
   private static final LoggedTunableNumber deployAmps =
-      new LoggedTunableNumber("Slamtake/Slam/DeployAmps", -5.0);
+      new LoggedTunableNumber("Slamtake/Slam/DeployAmps", -25.0);
   private static final LoggedTunableNumber retractAmps =
-      new LoggedTunableNumber("Slamtake/Slam/RetractAmps", 30.0);
+      new LoggedTunableNumber("Slamtake/Slam/RetractAmps", 50.0);
   private final RollerSystem roller;
   private final Slam slam;
 

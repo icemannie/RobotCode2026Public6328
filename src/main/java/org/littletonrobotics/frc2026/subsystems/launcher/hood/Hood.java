@@ -30,8 +30,8 @@ import org.littletonrobotics.junction.AutoLogOutput;
 import org.littletonrobotics.junction.Logger;
 
 public class Hood extends FullSubsystem {
-  public static final double minAngle = Units.degreesToRadians(15);
-  public static final double maxAngle = Units.degreesToRadians(45);
+  public static final double minAngle = Units.degreesToRadians(10);
+  public static final double maxAngle = Units.degreesToRadians(38);
 
   private static final LoggedTunableNumber kP = new LoggedTunableNumber("Hood/kP");
   private static final LoggedTunableNumber kD = new LoggedTunableNumber("Hood/kD");

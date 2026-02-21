@@ -23,14 +23,14 @@ import org.littletonrobotics.junction.AutoLogOutput;
 
 public class Kicker extends FullSubsystem {
   private static final LoggedTunableNumber rollerIntakeSpeed =
-      new LoggedTunableNumber("Kicker/Roller/IntakeSetpointSpeed", 180);
+      new LoggedTunableNumber("Kicker/Roller/IntakeSetpointSpeed", 75);
   private static final LoggedTunableNumber rollerOuttakeSetpoint =
       new LoggedTunableNumber("Kicker/Roller/OuttakeSetpontSpeed", -200);
 
-  private static final LoggedTunableNumber kP = new LoggedTunableNumber("Kicker/kP", 0.4);
+  private static final LoggedTunableNumber kP = new LoggedTunableNumber("Kicker/kP", 3.0);
   private static final LoggedTunableNumber kD = new LoggedTunableNumber("Kicker/kD", 0.0);
-  private static final LoggedTunableNumber kS = new LoggedTunableNumber("Kicker/kS", 0.3);
-  private static final LoggedTunableNumber kV = new LoggedTunableNumber("Kicker/kV", 0.0185);
+  private static final LoggedTunableNumber kS = new LoggedTunableNumber("Kicker/kS", 0.5);
+  private static final LoggedTunableNumber kV = new LoggedTunableNumber("Kicker/kV", 0.09);
 
   private final RollerSystem roller;
   private final Optional<SimFuelCount> simFuelCount;

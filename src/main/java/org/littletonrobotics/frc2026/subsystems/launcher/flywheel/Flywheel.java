@@ -8,7 +8,9 @@
 package org.littletonrobotics.frc2026.subsystems.launcher.flywheel;
 
 import edu.wpi.first.math.filter.Debouncer;
+import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj.Alert;
+import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
@@ -17,6 +19,7 @@ import org.littletonrobotics.frc2026.Robot;
 import org.littletonrobotics.frc2026.subsystems.launcher.LaunchCalculator;
 import org.littletonrobotics.frc2026.subsystems.launcher.flywheel.FlywheelIO.FlywheelIOOutputMode;
 import org.littletonrobotics.frc2026.subsystems.launcher.flywheel.FlywheelIO.FlywheelIOOutputs;
+import org.littletonrobotics.frc2026.util.EqualsUtil;
 import org.littletonrobotics.frc2026.util.FullSubsystem;
 import org.littletonrobotics.frc2026.util.LoggedTracer;
 import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
@@ -41,10 +44,14 @@ public class Flywheel extends FullSubsystem {
   private final Alert follower2Disconnected;
   private final Alert follower3Disconnected;
 
-  private static final LoggedTunableNumber kP = new LoggedTunableNumber("Flywheel/kP", 0.6);
+  private static final LoggedTunableNumber kP = new LoggedTunableNumber("Flywheel/kP", 0.4);
   private static final LoggedTunableNumber kD = new LoggedTunableNumber("Flywheel/kD", 0.0);
-  private static final LoggedTunableNumber kS = new LoggedTunableNumber("Flywheel/kS", 0.3);
-  private static final LoggedTunableNumber kV = new LoggedTunableNumber("Flywheel/kV", 0.0195);
+  private static final LoggedTunableNumber kS = new LoggedTunableNumber("Flywheel/kS", 0.4);
+  private static final LoggedTunableNumber kV = new LoggedTunableNumber("Flywheel/kV", 0.02);
+  private static final LoggedTunableNumber maxAcceleration =
+      new LoggedTunableNumber("Flywheel/MaxAcceleration", 50.0);
+
+  private SlewRateLimiter slewRateLimiter = new SlewRateLimiter(maxAcceleration.get());
 
   @Getter
   @Accessors(fluent = true)
@@ -69,6 +76,14 @@ public class Flywheel extends FullSubsystem {
 
     outputs.kP = kP.get();
     outputs.kD = kD.get();
+
+    if (maxAcceleration.hasChanged(hashCode())) {
+      slewRateLimiter = new SlewRateLimiter(maxAcceleration.get());
+    }
+
+    if (DriverStation.isDisabled()) {
+      stop();
+    }
 
     disconnected.set(
         Robot.showHardwareAlerts() && !motorConnectedDebouncer.calculate(inputs.connected));
@@ -95,11 +110,13 @@ public class Flywheel extends FullSubsystem {
 
   /** Run closed loop at the specified velocity. */
   private void runVelocity(double velocityRadsPerSec) {
+    double setpointRadPerSec = slewRateLimiter.calculate(velocityRadsPerSec);
+    atGoal = EqualsUtil.epsilonEquals(setpointRadPerSec, velocityRadsPerSec, 2.0);
     outputs.mode = FlywheelIOOutputMode.VELOCITY;
-    outputs.velocityRadsPerSec = velocityRadsPerSec;
-    outputs.feedforward =
-        Math.signum(velocityRadsPerSec) * kS.get() + velocityRadsPerSec * kV.get();
-    Logger.recordOutput("Flywheel/Setpoint", velocityRadsPerSec);
+    outputs.velocityRadsPerSec = setpointRadPerSec;
+    outputs.feedforward = Math.signum(setpointRadPerSec) * kS.get() + setpointRadPerSec * kV.get();
+    Logger.recordOutput("Flywheel/Setpoint", setpointRadPerSec);
+    Logger.recordOutput("Flywheel/Goal", velocityRadsPerSec);
   }
 
   /** Stops the flywheel. */
@@ -107,6 +124,7 @@ public class Flywheel extends FullSubsystem {
     outputs.mode = FlywheelIOOutputMode.COAST;
     outputs.velocityRadsPerSec = 0.0;
     atGoal = false;
+    slewRateLimiter.reset(inputs.velocityRadsPerSec);
   }
 
   /** Returns the current velocity in RPM. */

@@ -9,6 +9,7 @@ class HubCounterApp {
         this.reconnectInterval = null;
         this.previousTotal = 0;
         this.isExternal = false;
+        this.pauseCounting = false;
         this.config = {
             thresholds: { yellow: 100, blue: 360 },
             colors: {
@@ -269,6 +270,9 @@ class HubCounterApp {
 
     updateExternalState(data) {
         this.isExternal = data.is_external;
+        if (data.pause_counting !== undefined) {
+            this.pauseCounting = data.pause_counting;
+        }
         const banner = document.getElementById('external-banner');
         if (data.is_external) {
             document.getElementById('external-pattern').textContent = data.pattern || '-';
@@ -284,10 +288,25 @@ class HubCounterApp {
         } else {
             banner.style.display = 'none';
         }
+        this.updatePausedDisplay();
+    }
+
+    updatePausedDisplay() {
+        const pausedDisplay = document.getElementById('paused-count-display');
+        if (this.isExternal && this.pauseCounting) {
+            pausedDisplay.style.display = 'block';
+        } else {
+            pausedDisplay.style.display = 'none';
+        }
     }
 
     updateCounts(counts) {
-        const { channels, total } = counts;
+        const { channels, total, paused_total } = counts;
+
+        // Update paused count
+        if (paused_total !== undefined) {
+            document.getElementById('paused-count').textContent = paused_total;
+        }
 
         // Update channel counts
         channels.forEach((count, i) => {

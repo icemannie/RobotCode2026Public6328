@@ -73,7 +73,7 @@ public class DriveConstants {
   public static final double alphabotMaxLinearSpeed = 4.69;
   public static final double alphabotMaxTrajectoryLinearSpeed = 4.0;
   public static final double alphabotMaxAngularSpeed = 6.46; // maxLinearSpeed / driveBaseRadius
-  public static final double alphabotWheelRadiusInches = 2.0;
+  public static final double alphabotWheelRadiusInches = 1.8796;
   public static final double alphabotTrajectoryWheelRadiusInches = 2.0;
   public static final double alphabotMaxTrajectoryWheelTorque = 3.0; // N * m
   public static final double alphabotMassLbs = 140.0;

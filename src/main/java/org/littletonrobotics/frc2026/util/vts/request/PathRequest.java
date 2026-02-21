@@ -27,4 +27,14 @@ public class PathRequest {
 
   /** Approximately control how much elapses between each sample */
   @Builder.Default public final double targetDt = 0.05;
+
+  /** Creates a new builder instance with the current state copied. */
+  public PathRequestBuilder clone() {
+    PathRequestBuilder newBuilder =
+        PathRequest.builder()
+            .segments(new ArrayList<>(this.segments))
+            .stopAtStart(this.stopAtStart)
+            .stopAtEnd(this.stopAtEnd);
+    return newBuilder;
+  }
 }

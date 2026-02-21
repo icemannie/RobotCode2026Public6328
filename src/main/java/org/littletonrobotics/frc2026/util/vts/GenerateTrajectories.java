@@ -124,13 +124,13 @@ public class GenerateTrajectories {
       try {
         mapper.writeValue(chorFile, chorRoot);
         System.out.println(
-            "\r" + " ".repeat(80) + "\rVTS Choreo project: Generated successfully ✅");
+            "\r" + " ".repeat(120) + "\rVTS Choreo project: Generated successfully ✅");
       } catch (IOException e) {
-        System.out.println("\r" + " ".repeat(80) + "\rVTS Choreo project: FAILED to generate 😬");
+        System.out.println("\r" + " ".repeat(120) + "\rVTS Choreo project: FAILED to generate 😬");
         e.printStackTrace();
       }
     } else {
-      System.out.println("\r" + " ".repeat(80) + "\rVTS Choreo project: Up-to-date 👍");
+      System.out.println("\r" + " ".repeat(120) + "\rVTS Choreo project: Up-to-date 👍");
     }
 
     // Generate trajectories
@@ -139,7 +139,7 @@ public class GenerateTrajectories {
       String name = entry.getKey();
       PathRequest request = entry.getValue();
 
-      System.out.print("\r" + " ".repeat(80) + "\rSearching for " + name + " 🔎");
+      System.out.print("\r" + " ".repeat(120) + "\rSearching for " + name + " 🔎");
 
       // Check hashcodes
       File trajFile = Path.of("src", "main", "deploy", "vts", entry.getKey() + ".traj").toFile();
@@ -148,7 +148,7 @@ public class GenerateTrajectories {
             && trajFile.getCanonicalFile().getName().equals(trajFile.getName())
             && readTrajHash(trajFile, name) != null
             && readTrajHash(trajFile, name).equals(getHashCode(robotConfig, entry.getValue()))) {
-          System.out.println("\r" + " ".repeat(80) + "\r" + name + ": Up-to-date 👍");
+          System.out.println("\r" + " ".repeat(120) + "\r" + name + ": Up-to-date 👍");
           completedPaths.add(name);
           continue;
         }
@@ -164,7 +164,7 @@ public class GenerateTrajectories {
       // Print status
       System.out.print(
           "\r"
-              + " ".repeat(80)
+              + " ".repeat(120)
               + "\r"
               + name
               + " not found or not up-to-date: Regenerating 🔄 (JSON)");
@@ -404,22 +404,22 @@ public class GenerateTrajectories {
       try {
         mapper.writeValue(trajFile, trajRoot);
       } catch (IOException e) {
-        System.out.println("\r" + " ".repeat(80) + "\r" + name + " - JSON Creation FAILED 😬");
+        System.out.println("\r" + " ".repeat(120) + "\r" + name + " - JSON Creation FAILED 😬");
         e.printStackTrace();
         continue;
       }
 
       System.out.print(
-          "\r" + " ".repeat(80) + "\r" + name + " not found or not up-to-date: Generating 🔄");
+          "\r" + " ".repeat(120) + "\r" + name + " not found or not up-to-date: Generating 🔄");
 
       try {
         ChoreoLauncher.generateTrajectory(chorFile, name);
         System.out.print(
-            "\r" + " ".repeat(80) + "\r" + name + " Path Generated: Adding Hashcode #️⃣");
+            "\r" + " ".repeat(120) + "\r" + name + " Path Generated: Adding Hashcode #️⃣");
       } catch (Exception e) {
         System.out.println(
             "\r"
-                + " ".repeat(80)
+                + " ".repeat(120)
                 + "\r"
                 + name
                 + ": Choreo Generation FAILED 😬 (Try generating the trajectory in Choreo for details).");
@@ -431,7 +431,7 @@ public class GenerateTrajectories {
         ((ObjectNode) trajWithHash).put("hashcode", getHashCode(robotConfig, request));
         mapper.writer().writeValue(trajFile, trajWithHash);
       } catch (IOException e) {
-        System.out.println("\r" + " ".repeat(80) + "\r" + name + ": Hashcode Addition FAILED 😬");
+        System.out.println("\r" + " ".repeat(120) + "\r" + name + ": Hashcode Addition FAILED 😬");
         e.printStackTrace();
       }
 
@@ -439,7 +439,7 @@ public class GenerateTrajectories {
       double endTime = System.currentTimeMillis();
       System.out.println(
           "\r"
-              + " ".repeat(80)
+              + " ".repeat(120)
               + "\r"
               + name
               + ": Generated successfully in "
@@ -460,13 +460,13 @@ public class GenerateTrajectories {
                     && !filename.equals("VTS.chor")) {
                   path.toFile().delete();
                   System.out.println(
-                      "\r" + " ".repeat(80) + "\r" + components[0] + " - Deleted 🫡");
+                      "\r" + " ".repeat(120) + "\r" + components[0] + " - Deleted 🫡");
                 }
               });
     } catch (IOException e) {
       e.printStackTrace();
     }
-    System.out.println("\r" + " ".repeat(80) + "\r\nAll trajectories up-to-date!");
+    System.out.println("\r" + " ".repeat(120) + "\r\nAll trajectories up-to-date!");
   }
 
   private static String readTrajHash(File pathFile, String name) {
@@ -475,7 +475,7 @@ public class GenerateTrajectories {
       return hashcode.asText();
     } catch (Exception e) {
       System.out.print(
-          "\r" + " ".repeat(80) + "\r" + name + " Hashcode not found: Regenerating 🔄");
+          "\r" + " ".repeat(120) + "\r" + name + " Hashcode not found: Regenerating 🔄");
     }
     return null;
   }

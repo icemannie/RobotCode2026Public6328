@@ -270,8 +270,11 @@ public class Robot extends LoggedRobot {
     Logger.recordOutput("LaunchCalculator/Parameters", launchCalculator.getParameters());
     Logger.recordOutput(
         "LaunchCalculator/HoodAngleOffsetDeg", launchCalculator.getHoodAngleOffsetDeg());
-    SmartDashboard.putString(
-        "Hood Angle Offset", String.format("%.1f", launchCalculator.getHoodAngleOffsetDeg()));
+    String formattedOffset = String.format("%.1f", launchCalculator.getHoodAngleOffsetDeg());
+    if (formattedOffset.equals("-0.0")) {
+      formattedOffset = "0.0";
+    }
+    SmartDashboard.putString("Hood Angle Offset", formattedOffset);
 
     // Clear launching parameters
     launchCalculator.clearLaunchingParameters();

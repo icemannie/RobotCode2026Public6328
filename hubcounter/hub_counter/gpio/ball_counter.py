@@ -23,6 +23,7 @@ class BallCounter:
         """
         self._num_channels = num_channels
         self._counts = [0] * num_channels
+        self._paused_total = 0
         self._lock = threading.Lock()
         self._callbacks: list[CountChangeCallback] = []
 
@@ -30,7 +31,7 @@ class BallCounter:
     def counts(self) -> BallCounts:
         """Get current ball counts (thread-safe)."""
         with self._lock:
-            return BallCounts(channels=self._counts.copy())
+            return BallCounts(channels=self._counts.copy(), paused_total=self._paused_total)
 
     def increment(self, channel: int) -> BallCounts:
         """Increment count for a specific channel.
@@ -49,10 +50,23 @@ class BallCounter:
 
         with self._lock:
             self._counts[channel] += 1
-            counts = BallCounts(channels=self._counts.copy())
+            counts = BallCounts(channels=self._counts.copy(), paused_total=self._paused_total)
 
         logger.info(f"Ball detected on channel {channel}, total: {counts.total}")
         self._notify_callbacks(counts)
+        return counts
+
+    def increment_paused(self) -> BallCounts:
+        """Increment the paused count (balls detected while counting is paused).
+
+        Returns:
+            Updated BallCounts.
+        """
+        with self._lock:
+            self._paused_total += 1
+            counts = BallCounts(channels=self._counts.copy(), paused_total=self._paused_total)
+
+        logger.info(f"Ball detected while paused, paused total: {self._paused_total}")
         return counts
 
     def reset(self) -> BallCounts:
@@ -63,7 +77,8 @@ class BallCounter:
         """
         with self._lock:
             self._counts = [0] * self._num_channels
-            counts = BallCounts(channels=self._counts.copy())
+            self._paused_total = 0
+            counts = BallCounts(channels=self._counts.copy(), paused_total=0)
 
         logger.info("Ball counts reset")
         self._notify_callbacks(counts)
@@ -83,7 +98,7 @@ class BallCounter:
 
         with self._lock:
             self._counts = channels.copy()
-            counts = BallCounts(channels=self._counts.copy())
+            counts = BallCounts(channels=self._counts.copy(), paused_total=self._paused_total)
 
         logger.info(f"Ball counts set to {counts.total}")
         self._notify_callbacks(counts)

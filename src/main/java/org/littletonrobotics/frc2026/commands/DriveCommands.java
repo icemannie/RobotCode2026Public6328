@@ -45,7 +45,7 @@ public class DriveCommands {
   private static final LoggedTunableNumber driveLaunchToleranceDeg =
       new LoggedTunableNumber("DriveCommands/Launching/ToleranceDeg", 10.0);
   private static final LoggedTunableNumber driveLaunchMaxPolarVelocityRadPerSec =
-      new LoggedTunableNumber("DriveCommands/Launching/MaxPolarVelocityRadPerSec", 0.25);
+      new LoggedTunableNumber("DriveCommands/Launching/MaxPolarVelocityRadPerSec", 0.5);
 
   private DriveCommands() {}
 

@@ -16,7 +16,7 @@ public class PathRequestHelpers {
   /** Add segments to a path request. */
   public static PathRequestBuilder segments(
       PathRequestBuilder builder, PathRequestSegment... segments) {
-    List<PathRequestSegment> list = new ArrayList<>(segments.length);
+    List<PathRequestSegment> list = new ArrayList<>(builder.build().segments);
     for (var segment : segments) {
       list.add(segment);
     }

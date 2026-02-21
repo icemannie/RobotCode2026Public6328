@@ -267,7 +267,7 @@ async def broadcast_counts(counts):
 
     message = {
         "type": "counts",
-        "data": {"channels": counts.channels, "total": counts.total},
+        "data": {"channels": counts.channels, "total": counts.total, "paused_total": counts.paused_total},
     }
 
     disconnected = []
@@ -308,13 +308,14 @@ async def broadcast_nt_status(connected: bool):
         _websocket_connections.remove(ws)
 
 
-async def broadcast_external_state(is_external: bool, pattern: str, color: str):
+async def broadcast_external_state(is_external: bool, pattern: str, color: str, pause_counting: bool = False):
     """Broadcast external control state to all WebSocket clients.
 
     Args:
         is_external: Whether external control is active.
         pattern: Current pattern name.
         color: Current color hex string.
+        pause_counting: Whether counting is paused.
     """
     if not _websocket_connections:
         return
@@ -325,6 +326,7 @@ async def broadcast_external_state(is_external: bool, pattern: str, color: str):
             "is_external": is_external,
             "pattern": pattern,
             "color": color,
+            "pause_counting": pause_counting,
         },
     }
 
@@ -353,7 +355,7 @@ async def websocket_endpoint(websocket: WebSocket):
             await websocket.send_json(
                 {
                     "type": "counts",
-                    "data": {"channels": counts.channels, "total": counts.total},
+                    "data": {"channels": counts.channels, "total": counts.total, "paused_total": counts.paused_total},
                 }
             )
 
@@ -365,6 +367,7 @@ async def websocket_endpoint(websocket: WebSocket):
                     "is_external": _app._is_external if _app else False,
                     "pattern": "",
                     "color": "",
+                    "pause_counting": _app._pause_counting if _app else False,
                 },
             }
         )
