@@ -102,12 +102,12 @@ public class LaunchCalculator {
       new LaunchPreset(
           new LoggedTunableNumber(
               "LaunchCalculator/Presets/HoodMin/HoodAngle", Units.radiansToDegrees(Hood.minAngle)),
-          new LoggedTunableNumber("LaunchCalculator/Presets/HoodMin/FlywheelSpeed", 100));
+          new LoggedTunableNumber("LaunchCalculator/Presets/HoodMin/FlywheelSpeed", 50));
   public static final LaunchPreset hoodMaxPreset =
       new LaunchPreset(
           new LoggedTunableNumber(
               "LaunchCalculator/Presets/HoodMax/HoodAngle", Units.radiansToDegrees(Hood.maxAngle)),
-          new LoggedTunableNumber("LaunchCalculator/Presets/HoodMax/FlywheelSpeed", 100));
+          new LoggedTunableNumber("LaunchCalculator/Presets/HoodMax/FlywheelSpeed", 50));
 
   public static record LaunchPreset(
       LoggedTunableNumber hoodAngleDeg, LoggedTunableNumber flywheelSpeed) {}
@@ -248,8 +248,9 @@ public class LaunchCalculator {
 
     // Calculate target
     Translation2d target =
-        AllianceFlipUtil.apply(
-            passing ? getPassingTarget() : FieldConstants.Hub.topCenterPoint.toTranslation2d());
+        passing
+            ? getPassingTarget()
+            : AllianceFlipUtil.apply(FieldConstants.Hub.topCenterPoint.toTranslation2d());
     Pose2d launcherPosition = estimatedPose.transformBy(robotToLauncher.toTransform2d());
     double launcherToTargetDistance = target.getDistance(launcherPosition.getTranslation());
 

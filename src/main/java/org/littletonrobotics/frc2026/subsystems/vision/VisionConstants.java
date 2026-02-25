@@ -27,7 +27,7 @@ public class VisionConstants {
 
   public static final double fuelDetectConfidenceThreshold = 0.2;
 
-  private static int monoExposure = 1500;
+  private static int monoExposure = 1800;
   private static double monoGain = 15.0;
   private static double monoDenoise = 1.0;
   private static int colorExposure = 4500;
@@ -50,7 +50,7 @@ public class VisionConstants {
                                     Units.degreesToRadians(-22.5),
                                     Units.degreesToRadians(175.0))));
                       })
-                  .id("40552080")
+                  .id("40530395")
                   .width(1800)
                   .height(1200)
                   .exposure(monoExposure)

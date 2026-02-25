@@ -120,7 +120,7 @@ public class AutoFieldConstants {
         Waypoint.builder()
             .translation(
                 FieldConstants.Outpost.centerPoint.plus(
-                    new Translation2d(DriveConstants.fullWidthX / 2 + 0.1, 0.25)))
+                    new Translation2d(DriveConstants.fullWidthX / 2 + 0.1, 0.4)))
             .area(Area.OUTPOST)
             .build();
   }

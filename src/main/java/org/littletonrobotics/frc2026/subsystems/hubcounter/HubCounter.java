@@ -132,7 +132,7 @@ public class HubCounter extends VirtualSubsystem {
 
     // -- Log Fuel related values
     Logger.recordOutput("HubCounter/ScoredFuel", succesfullyScoredFuel);
-    Logger.recordOutput("HubCounter/ScoredFuelPasued", unsuccesfullyScoredFuel);
+    Logger.recordOutput("HubCounter/ScoredFuelPaused", unsuccesfullyScoredFuel);
     Logger.recordOutput("HubCounter/Control/ScoringPaused", isScoringPaused);
 
     LoggedTracer.record("HubCounter/Periodic");

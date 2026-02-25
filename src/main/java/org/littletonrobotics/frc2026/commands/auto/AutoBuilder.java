@@ -119,11 +119,15 @@ public class AutoBuilder {
                 AutoQuestionResponse.LEFT_BUMP,
                 followTrajectory("bumpLeftInnerToTower", drive, true),
                 AutoQuestionResponse.RIGHT_BUMP,
-                followTrajectory("bumpRightInnerToOutpost", drive, true)
-                    .andThen(Commands.waitSeconds(3)),
+                Commands.waitSeconds(3.0)
+                    .andThen(
+                        followTrajectory("bumpRightInnerToOutpost", drive, true),
+                        Commands.waitSeconds(10)),
                 AutoQuestionResponse.RIGHT_TRENCH,
-                followTrajectory("trenchRightStartToOutpost", drive, true)
-                    .andThen(Commands.waitSeconds(3))),
+                Commands.waitSeconds(3.0)
+                    .andThen(
+                        followTrajectory("trenchRightStartToOutpost", drive, true),
+                        Commands.waitSeconds(10))),
             () -> responses.get().get(0)),
         Commands.either(
                 AutoCommands.driveToPose(drive, () -> Launch.leftTower),
