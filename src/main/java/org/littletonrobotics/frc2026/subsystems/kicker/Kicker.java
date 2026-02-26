@@ -23,7 +23,7 @@ import org.littletonrobotics.junction.AutoLogOutput;
 
 public class Kicker extends FullSubsystem {
   private static final LoggedTunableNumber rollerIntakeSpeed =
-      new LoggedTunableNumber("Kicker/Roller/IntakeSetpointSpeed", 75);
+      new LoggedTunableNumber("Kicker/Roller/IntakeSetpointSpeed", 200); // Higher than max speed
   private static final LoggedTunableNumber rollerOuttakeSetpoint =
       new LoggedTunableNumber("Kicker/Roller/OuttakeSetpontSpeed", -200);
 

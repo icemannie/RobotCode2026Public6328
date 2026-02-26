@@ -266,7 +266,10 @@ public class RobotContainer {
     hood.setDefaultCommand(hood.runTrackTargetCommand());
     flywheel.setDefaultCommand(
         new ContinuousConditionalCommand(
-            flywheel.stopCommand(), flywheel.runFixedCommand(() -> 120.0), disableAutoSpinup));
+            flywheel.stopCommand(),
+            flywheel.runFixedCommand(
+                () -> LaunchCalculator.getInstance().getParameters().flywheelIdleSpeed()),
+            disableAutoSpinup));
   }
 
   private void configureAutos() {
@@ -391,7 +394,7 @@ public class RobotContainer {
 
     // Outtake
     primary
-        .leftTrigger()
+        .leftClaw()
         .whileTrue(
             Commands.parallel(
                     Commands.startEnd(
@@ -409,7 +412,7 @@ public class RobotContainer {
 
     // Unjam
     primary
-        .rightTrigger()
+        .rightClaw()
         .whileTrue(
             Commands.parallel(
                     Commands.startEnd(
@@ -424,7 +427,7 @@ public class RobotContainer {
 
     // Outpost preset
     primary
-        .a()
+        .lowerLeftPaddle()
         .whileTrue(
             flywheel
                 .runFixedCommand(LaunchCalculator.outpostPreset.flywheelSpeed())
@@ -437,7 +440,7 @@ public class RobotContainer {
 
     // Tower preset
     primary
-        .b()
+        .lowerRightPaddle()
         .whileTrue(
             flywheel
                 .runFixedCommand(LaunchCalculator.towerPreset.flywheelSpeed())
@@ -450,7 +453,7 @@ public class RobotContainer {
 
     // Trench preset
     primary
-        .x()
+        .upperLeftPaddle()
         .whileTrue(
             flywheel
                 .runFixedCommand(LaunchCalculator.trenchPreset.flywheelSpeed())
@@ -463,7 +466,7 @@ public class RobotContainer {
 
     // Hub preset
     primary
-        .y()
+        .upperRightPaddle()
         .whileTrue(
             flywheel
                 .runFixedCommand(LaunchCalculator.hubPreset.flywheelSpeed())
@@ -473,13 +476,9 @@ public class RobotContainer {
                             Units.degreesToRadians(LaunchCalculator.hubPreset.hoodAngleDeg().get()),
                         () -> 0.0)));
 
-    // Deploy intake
-    primary.povUp().onTrue(Commands.runOnce(() -> slamtake.setSlamGoal(SlamGoal.DEPLOY)));
-
     // Retract intake
     primary
-        .povDown()
-        .or(primary.lowerRightPaddle())
+        .rightTrigger()
         .onTrue(Commands.runOnce(() -> slamtake.setSlamGoal(SlamGoal.RETRACT)))
         .onTrue(
             Commands.runEnd(
@@ -490,7 +489,7 @@ public class RobotContainer {
 
     // Run intake
     primary
-        .upperRightPaddle()
+        .leftTrigger()
         .whileTrue(
             Commands.runEnd(
                 () -> slamtake.setIntakeGoal(IntakeGoal.INTAKE),
@@ -598,13 +597,14 @@ public class RobotContainer {
     // Hub counter override
     ignoreHubState
         .onTrue(
-            Commands.runOnce(() -> hubCounter.setExternal(true))
+            Commands.runOnce(() -> hubCounter.setExternal(false))
                 .withName("Enable External Hub Counter Control")
                 .ignoringDisable(true))
         .onFalse(
-            Commands.runOnce(() -> hubCounter.setExternal(false))
+            Commands.runOnce(() -> hubCounter.setExternal(true))
                 .withName("Disable External Hub Counter Control")
                 .ignoringDisable(true));
+    hubCounter.setExternal(!ignoreHubState.getAsBoolean());
 
     // ****** ALERTS ******
 

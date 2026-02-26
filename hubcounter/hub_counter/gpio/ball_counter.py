@@ -67,6 +67,7 @@ class BallCounter:
             counts = BallCounts(channels=self._counts.copy(), paused_total=self._paused_total)
 
         logger.info(f"Ball detected while paused, paused total: {self._paused_total}")
+        self._notify_callbacks(counts)
         return counts
 
     def reset(self) -> BallCounts:

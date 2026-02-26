@@ -146,6 +146,9 @@ public class Drive extends FullSubsystem {
     Logger.recordOutput("SwerveStates/Setpoints", setpointStates);
     Logger.recordOutput("SwerveChassisSpeeds/Setpoints", discreteSpeeds);
 
+    // Publish setpoints
+    RobotState.getInstance().setRobotSetpointVelocity(discreteSpeeds);
+
     // Send setpoints to modules
     for (int i = 0; i < 4; i++) {
       modules[i].runSetpoint(setpointStates[i]);
@@ -160,6 +163,7 @@ public class Drive extends FullSubsystem {
     for (int i = 0; i < 4; i++) {
       modules[i].runCharacterization(output);
     }
+    RobotState.getInstance().setRobotSetpointVelocity(new ChassisSpeeds());
   }
 
   /** Stops the drive. */

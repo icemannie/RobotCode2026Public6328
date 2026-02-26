@@ -136,6 +136,17 @@ class HubCounterApp:
             payload: Event payload with 'connected' bool.
         """
         connected = payload.get("connected", False)
+
+        # Revert external control on disconnect
+        if not connected and self._is_external:
+            logger.info("NT disconnected, reverting external control")
+            self._is_external = False
+            self._external_dismissed = False
+            self._last_robot_external = False
+            if self._led_controller:
+                self._led_controller.stop_pattern()
+            await broadcast_external_state(False, "", "", False)
+
         await broadcast_nt_status(connected)
 
     async def _poll_external_state(self) -> None:
@@ -259,6 +270,11 @@ class HubCounterApp:
         self._last_external_color = ""
         if self._led_controller:
             self._led_controller.stop_pattern()
+
+        # Tell the robot control was dismissed
+        if self._nt_client:
+            self._nt_client.set_external(False)
+
         logger.info("External control dismissed by user")
         await broadcast_external_state(False, "", "", False)
 

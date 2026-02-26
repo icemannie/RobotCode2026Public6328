@@ -23,14 +23,16 @@ import java.text.DecimalFormat;
 import java.text.NumberFormat;
 import java.util.function.BooleanSupplier;
 import java.util.function.DoubleSupplier;
+import org.littletonrobotics.frc2026.Constants;
 import org.littletonrobotics.frc2026.FieldConstants;
 import org.littletonrobotics.frc2026.RobotState;
 import org.littletonrobotics.frc2026.subsystems.drive.Drive;
 import org.littletonrobotics.frc2026.subsystems.drive.DriveConstants;
 import org.littletonrobotics.frc2026.subsystems.launcher.LaunchCalculator;
+import org.littletonrobotics.frc2026.subsystems.launcher.LauncherConstants;
 import org.littletonrobotics.frc2026.util.LoggedTunableNumber;
 import org.littletonrobotics.frc2026.util.geometry.AllianceFlipUtil;
-import org.littletonrobotics.junction.AutoLogOutput;
+import org.littletonrobotics.frc2026.util.geometry.GeomUtil;
 import org.littletonrobotics.junction.Logger;
 
 public class DriveCommands {
@@ -45,7 +47,11 @@ public class DriveCommands {
   private static final LoggedTunableNumber driveLaunchToleranceDeg =
       new LoggedTunableNumber("DriveCommands/Launching/ToleranceDeg", 10.0);
   private static final LoggedTunableNumber driveLaunchMaxPolarVelocityRadPerSec =
-      new LoggedTunableNumber("DriveCommands/Launching/MaxPolarVelocityRadPerSec", 0.5);
+      new LoggedTunableNumber("DriveCommands/Launching/MaxPolarVelocityRadPerSec", 0.6);
+  private static final LoggedTunableNumber driveLauncherCORMinErrorDeg =
+      new LoggedTunableNumber("DriveCommands/Launching/DriveLauncherCORMinErrorDeg", 15.0);
+  private static final LoggedTunableNumber driveLauncherCORMaxErrorDeg =
+      new LoggedTunableNumber("DriveCommands/Launching/DriveLauncherCORMaxErrorDeg", 30.0);
 
   private DriveCommands() {}
 
@@ -109,7 +115,6 @@ public class DriveCommands {
         drive);
   }
 
-  @AutoLogOutput
   public static boolean atLaunchGoal() {
     return DriverStation.isEnabled()
         && Math.abs(
@@ -182,14 +187,58 @@ public class DriveCommands {
           }
 
           // Apply chassis speeds
+          double corScalar =
+              MathUtil.clamp(
+                  (Math.abs(
+                              parameters
+                                  .driveAngle()
+                                  .minus(RobotState.getInstance().getRotation())
+                                  .getDegrees())
+                          - driveLauncherCORMinErrorDeg.get())
+                      / (driveLauncherCORMaxErrorDeg.get() - driveLauncherCORMinErrorDeg.get()),
+                  0.0,
+                  1.0);
+          Translation2d launcherToRobot =
+              LauncherConstants.robotToLauncher.getTranslation().toTranslation2d().unaryMinus();
+          ChassisSpeeds fieldRelativeSpeedsWithOffset =
+              GeomUtil.transformVelocity(
+                  new ChassisSpeeds(
+                      fieldRelativeLinearVelocity.getX(),
+                      fieldRelativeLinearVelocity.getY(),
+                      omegaOutput),
+                  launcherToRobot.times(1.0 - corScalar),
+                  RobotState.getInstance().getRotation());
           drive.runVelocity(
               ChassisSpeeds.fromFieldRelativeSpeeds(
-                  fieldRelativeLinearVelocity.getX(),
-                  fieldRelativeLinearVelocity.getY(),
-                  omegaOutput,
-                  RobotState.getInstance().getRotation()));
+                  fieldRelativeSpeedsWithOffset, RobotState.getInstance().getRotation()));
+
+          // Override robot setpoint speeds published by drive. We run our calculations using the
+          // speeds that will ultimately be applied once we are using the full robot-to-launcher
+          // transform. This prevents the setpoint from changing due to the shifting COR of the
+          // robot.
+          ChassisSpeeds fieldRelativeSpeedsWithFullOffset =
+              GeomUtil.transformVelocity(
+                  new ChassisSpeeds(
+                      fieldRelativeLinearVelocity.getX(),
+                      fieldRelativeLinearVelocity.getY(),
+                      omegaOutput),
+                  launcherToRobot,
+                  RobotState.getInstance().getRotation());
+          RobotState.getInstance()
+              .setRobotSetpointVelocity(
+                  ChassisSpeeds.discretize(
+                      ChassisSpeeds.fromFieldRelativeSpeeds(
+                          fieldRelativeSpeedsWithFullOffset,
+                          RobotState.getInstance().getRotation()),
+                      Constants.loopPeriodSecs));
 
           // Log data
+          Logger.recordOutput(
+              "DriveCommands/Launching/SetpointPose",
+              new Pose2d(
+                  RobotState.getInstance().getEstimatedPose().getTranslation(),
+                  parameters.driveAngle()));
+          Logger.recordOutput("DriveCommands/Launching/AtGoalTolerance", atLaunchGoal());
           Logger.recordOutput(
               "DriveCommands/Launching/ErrorPosition",
               parameters.driveAngle().minus(RobotState.getInstance().getRotation()));

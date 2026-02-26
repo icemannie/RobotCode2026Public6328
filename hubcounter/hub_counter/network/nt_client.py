@@ -61,6 +61,7 @@ class NetworkTablesClient:
 
         self._monitor_thread: Optional[threading.Thread] = None
         self._stop_monitor = threading.Event()
+        self._conn_listener_handle = None
 
         logger.info(
             f"NetworkTablesClient initialized (available={NT_AVAILABLE}, team={config.team_number}, robot_address={config.robot_address})"
@@ -150,7 +151,7 @@ class NetworkTablesClient:
 
         # Add connection listener
         logger.debug("Adding connection listener...")
-        self._inst.addConnectionListener(True, self._on_connection_change)
+        self._conn_listener_handle = self._inst.addConnectionListener(True, self._on_connection_change)
 
         # Start connection status monitor thread
         self._stop_monitor.clear()
@@ -215,8 +216,14 @@ class NetworkTablesClient:
         if self._pause_counting_sub:
             self._pause_counting_sub.close()
 
+        # Remove connection listener
+        if getattr(self, "_conn_listener_handle", None) is not None:
+            self._inst.removeListener(self._conn_listener_handle)
+            self._conn_listener_handle = None
+
         self._inst.stopClient()
         self._connected = False
+        self._event_bus.emit_sync(EventType.NT_CONNECTED, {"connected": False})
         logger.info("NetworkTables client stopped")
 
     def _connection_monitor(self) -> None:
@@ -255,7 +262,6 @@ class NetworkTablesClient:
 
     def _on_connection_change(self, event: "ntcore.Event") -> None:
         """Handle connection state changes.
-
         Args:
             event: NetworkTables connection event.
         """
@@ -263,19 +269,23 @@ class NetworkTablesClient:
         event_attrs = {attr: getattr(event, attr, None) for attr in dir(event) if not attr.startswith('_')}
         logger.debug(f"Connection event received: {event_attrs}")
 
-        connected = event.is_connected if hasattr(event, "is_connected") else False
+        # Correctly parse NT4 event data
+        if hasattr(event, "data") and hasattr(event.data, "connected"):
+            connected = event.data.connected
+        else:
+            connected = self._inst.isConnected()
+        
         self._connected = connected
-
         self._event_bus.emit_sync(EventType.NT_CONNECTED, {"connected": connected})
 
         if connected:
             # Try to get connection details
             conn_info = ""
-            if hasattr(event, 'data') and event.data:
+            if hasattr(event, "data") and event.data:
                 conn_data = event.data
-                if hasattr(conn_data, 'remote_id'):
+                if hasattr(conn_data, "remote_id"):
                     conn_info = f" (remote: {conn_data.remote_id})"
-                elif hasattr(conn_data, 'remote_ip'):
+                elif hasattr(conn_data, "remote_ip"):
                     conn_info = f" (ip: {conn_data.remote_ip})"
             logger.info(f"Connected to NetworkTables server{conn_info}")
         else:
@@ -350,7 +360,8 @@ class NetworkTablesClient:
         Returns:
             Dict with is_external, led_pattern, led_color (hex string), and pause_counting.
         """
-        if not NT_AVAILABLE or not self._inst:
+        # Add a check for self.is_connected
+        if not NT_AVAILABLE or not self._inst or not self.is_connected:
             return {"is_external": False, "led_pattern": 0, "led_color": "#000000", "pause_counting": False}
 
         try:
@@ -392,6 +403,11 @@ class NetworkTablesClient:
             logger.debug("Reset acknowledged (set ResetCounts to false)")
         except Exception as e:
             logger.error(f"Error acknowledging reset: {e}")
+
+    def set_external(self, state: bool) -> None:
+        """Publish external control state back to NetworkTables."""
+        if NT_AVAILABLE and self._inst and self._is_external_pub:
+            self._is_external_pub.set(state)
 
     @property
     def is_connected(self) -> bool:

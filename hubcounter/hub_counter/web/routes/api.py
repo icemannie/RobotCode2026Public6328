@@ -158,16 +158,26 @@ async def update_config(config: ConfigUpdate):
 
     updated = False
 
-    if config.team_number is not None:
+    nt_needs_restart = False
+    if (
+        config.team_number is not None
+        and config.team_number != _settings.network.team_number
+    ):
         _settings.network.team_number = config.team_number
-        if _nt_client:
-            _nt_client.update_config(_settings.network)
-        updated = True
+        nt_needs_restart = True
 
-    if config.robot_address is not None:
+    if (
+        config.robot_address is not None
+        and config.robot_address != _settings.network.robot_address
+    ):
         _settings.network.robot_address = config.robot_address
-        if _nt_client:
-            _nt_client.update_config(_settings.network)
+        nt_needs_restart = True
+
+    if nt_needs_restart and _nt_client:
+        # Since _nt_client shares the _settings.network reference,
+        # it already has the new values. We just need to force the restart.
+        _nt_client.stop()
+        _nt_client.start()
         updated = True
 
     if config.thresholds is not None:
@@ -193,6 +203,11 @@ async def update_config(config: ConfigUpdate):
     # Save settings to file
     if updated and _save_settings_fn:
         _save_settings_fn(_settings)
+
+    # Broadcast updated config if changed
+    if updated:
+        full_config = await get_config()
+        await broadcast_config(full_config)
 
     return {"success": True, "updated": updated}
 
@@ -224,6 +239,21 @@ async def simulate_ball(channel: int):
 
     if not 0 <= channel < 4:
         return {"success": False, "error": "Channel must be 0-3"}
+
+    # Check if counting is paused (only applies during external control)
+    if _app and _app._is_external and _app._pause_counting:
+        logger.debug(
+            f"Ball simulated on channel {channel} but counting is paused — incrementing paused count"
+        )
+        counts = _ball_counter.increment_paused()
+        if _nt_client:
+            _nt_client.publish_counts(counts)
+        await broadcast_counts(counts)
+        return {
+            "success": True,
+            "channel": channel,
+            "counts": CountsResponse(channels=counts.channels, total=counts.total),
+        }
 
     counts = _ball_counter.increment(channel)
 
@@ -341,6 +371,29 @@ async def broadcast_external_state(is_external: bool, pattern: str, color: str, 
         _websocket_connections.remove(ws)
 
 
+async def broadcast_config(config: dict):
+    """Broadcast config update to all WebSocket clients.
+
+    Args:
+        config: Config dict to broadcast.
+    """
+    if not _websocket_connections:
+        return
+
+    message = {"type": "config", "data": config}
+
+    disconnected = []
+    for websocket in _websocket_connections:
+        try:
+            await websocket.send_json(message)
+        except Exception:
+            disconnected.append(websocket)
+
+    # Clean up disconnected clients
+    for ws in disconnected:
+        _websocket_connections.remove(ws)
+
+
 @router.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time updates."""
@@ -359,14 +412,30 @@ async def websocket_endpoint(websocket: WebSocket):
                 }
             )
 
+        # Send initial status
+        await websocket.send_json(
+            {
+                "type": "status",
+                "data": {"nt_connected": _nt_client.is_connected if _nt_client else False},
+            }
+        )
+
         # Send initial external state
+        pattern_name = ""
+        color_hex = ""
+        if _app and _app._is_external:
+            # Replicate the name mapping from app.py
+            PATTERN_NAMES = {0: "Solid", 1: "Blink", 2: "Racing"}
+            pattern_name = PATTERN_NAMES.get(_app._last_external_pattern, "Unknown")
+            color_hex = _app._last_external_color
+
         await websocket.send_json(
             {
                 "type": "external_state",
                 "data": {
                     "is_external": _app._is_external if _app else False,
-                    "pattern": "",
-                    "color": "",
+                    "pattern": pattern_name,
+                    "color": color_hex,
                     "pause_counting": _app._pause_counting if _app else False,
                 },
             }

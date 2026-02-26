@@ -31,7 +31,7 @@ import org.littletonrobotics.junction.Logger;
 
 public class Hopper extends FullSubsystem {
   private static final LoggedTunableNumber rollerLaunchVolts =
-      new LoggedTunableNumber("Hopper/Roller/LaunchVolts", 4.0);
+      new LoggedTunableNumber("Hopper/Roller/LaunchVolts", 12.0);
   private static final LoggedTunableNumber rollerOuttakeVolts =
       new LoggedTunableNumber("Hopper/Roller/OuttakeVolts", -12.0);
 

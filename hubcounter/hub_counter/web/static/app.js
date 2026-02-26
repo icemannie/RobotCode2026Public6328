@@ -402,32 +402,37 @@ class HubCounterApp {
         try {
             const response = await fetch('/api/config');
             const config = await response.json();
-
-            // Store config
-            this.config.thresholds = config.thresholds || this.config.thresholds;
-            this.config.colors = config.colors || this.config.colors;
-
-            // Update form
-            document.getElementById('team-number').value = config.team_number || 6328;
-            document.getElementById('robot-address').value = config.robot_address || '10.63.28.1';
-            document.getElementById('threshold-yellow').value = config.thresholds?.yellow || 100;
-            document.getElementById('threshold-blue').value = config.thresholds?.blue || 360;
-
-            // Update colors
-            if (config.colors) {
-                ['red', 'yellow', 'blue'].forEach(color => {
-                    const rgb = config.colors[color];
-                    if (rgb) {
-                        document.getElementById(`color-${color}-r`).value = rgb[0];
-                        document.getElementById(`color-${color}-g`).value = rgb[1];
-                        document.getElementById(`color-${color}-b`).value = rgb[2];
-                        this.updateColorPreview(color);
-                    }
-                });
-            }
+            this.updateConfig(config);
         } catch (error) {
             console.error('Load config error:', error);
         }
+    }
+
+    updateConfig(config) {
+        // Store config
+        this.config.thresholds = config.thresholds || this.config.thresholds;
+        this.config.colors = config.colors || this.config.colors;
+
+        // Update form values
+        document.getElementById('team-number').value = config.team_number || 6328;
+        document.getElementById('robot-address').value = config.robot_address || '10.63.28.1';
+        document.getElementById('threshold-yellow').value = config.thresholds?.yellow || 100;
+        document.getElementById('threshold-blue').value = config.thresholds?.blue || 360;
+
+        if (config.colors) {
+            ['red', 'yellow', 'blue'].forEach(color => {
+                const rgb = config.colors[color];
+                if (rgb) {
+                    document.getElementById(`color-${color}-r`).value = rgb[0];
+                    document.getElementById(`color-${color}-g`).value = rgb[1];
+                    document.getElementById(`color-${color}-b`).value = rgb[2];
+                    this.updateColorPreview(color);
+                }
+            });
+        }
+
+        // Update current display that depends on config
+        this.updateTotalColor(this.previousTotal);
     }
 
     async saveConfig() {
@@ -580,6 +585,10 @@ class HubCounterApp {
                 break;
             case 'external_state':
                 this.updateExternalState(message.data);
+                break;
+            case 'config':
+                this.updateConfig(message.data);
+                this.showToast('Configuration updated remotely', 'info');
                 break;
             default:
                 console.log('Unknown WS message type:', message.type);

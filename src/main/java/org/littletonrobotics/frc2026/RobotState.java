@@ -60,6 +60,7 @@ public class RobotState {
   private Rotation2d gyroOffset = Rotation2d.kZero;
 
   @Getter @Setter private ChassisSpeeds robotVelocity = new ChassisSpeeds();
+  @Getter @Setter private ChassisSpeeds robotSetpointVelocity = new ChassisSpeeds();
 
   // MARK: - Initialization
 
@@ -96,6 +97,10 @@ public class RobotState {
 
   public ChassisSpeeds getFieldVelocity() {
     return ChassisSpeeds.fromRobotRelativeSpeeds(robotVelocity, getRotation());
+  }
+
+  public ChassisSpeeds getFieldSetpointVelocity() {
+    return ChassisSpeeds.fromRobotRelativeSpeeds(robotSetpointVelocity, getRotation());
   }
 
   @AutoLogOutput

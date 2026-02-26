@@ -11,6 +11,7 @@ import edu.wpi.first.math.filter.Debouncer;
 import edu.wpi.first.math.filter.SlewRateLimiter;
 import edu.wpi.first.wpilibj.Alert;
 import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import java.util.function.DoubleSupplier;
 import lombok.Getter;
@@ -97,6 +98,8 @@ public class Flywheel extends FullSubsystem {
         Robot.showHardwareAlerts()
             && !motorFollower3ConnectedDebouncer.calculate(inputs.follower3Connected));
 
+    SmartDashboard.putString("Flywheel Speed", String.format("%.0f", inputs.velocityRadsPerSec));
+    SmartDashboard.putBoolean("Flywheel At Goal", atGoal);
     LoggedTracer.record("Flywheel/Periodic");
   }
 
