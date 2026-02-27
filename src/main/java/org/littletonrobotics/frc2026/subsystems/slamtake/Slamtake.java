@@ -31,7 +31,7 @@ public class Slamtake extends FullSubsystem {
   private static final LoggedTunableNumber deployAmps =
       new LoggedTunableNumber("Slamtake/Slam/DeployAmps", -25.0);
   private static final LoggedTunableNumber retractAmps =
-      new LoggedTunableNumber("Slamtake/Slam/RetractAmps", 35.0);
+      new LoggedTunableNumber("Slamtake/Slam/RetractAmps", 0.0);
   private final RollerSystem roller;
   private final Slam slam;
 
@@ -96,7 +96,7 @@ public class Slamtake extends FullSubsystem {
 
     // Send slamtake data to RobotState
     RobotState.getInstance()
-        .addSlamtakeObservation(new SlamtakeObservation(Timer.getFPGATimestamp(), slamState));
+        .addSlamtakeObservation(new SlamtakeObservation(Timer.getTimestamp(), slamState));
 
     // Record cycle time
     LoggedTracer.record("Slamtake/Periodic");

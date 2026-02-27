@@ -41,9 +41,9 @@ public class DriveCommands {
   private static final double wheelRadiusRampRate = 0.05; // Rad/Sec^2
 
   private static final LoggedTunableNumber driveLaunchKp =
-      new LoggedTunableNumber("DriveCommands/Launching/kP", 8.0);
+      new LoggedTunableNumber("DriveCommands/Launching/kP", 12.0);
   private static final LoggedTunableNumber driveLaunchKd =
-      new LoggedTunableNumber("DriveCommands/Launching/kD", 0.5);
+      new LoggedTunableNumber("DriveCommands/Launching/kD", 1.5);
   private static final LoggedTunableNumber driveLaunchToleranceDeg =
       new LoggedTunableNumber("DriveCommands/Launching/ToleranceDeg", 10.0);
   private static final LoggedTunableNumber driveLaunchMaxPolarVelocityRadPerSec =

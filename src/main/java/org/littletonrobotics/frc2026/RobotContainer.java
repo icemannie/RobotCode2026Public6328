@@ -277,21 +277,21 @@ public class RobotContainer {
         new AutoBuilder(
             drive, slamtake, hopper, kicker, hood, flywheel, autoSelector::getResponses);
 
-    // // Home Depot Salesman
-    // autoSelector.addRoutine(
-    //     "Home Depot Salesman",
-    //     List.of(
-    //         new AutoQuestion("Through Tower?", List.of(AutoQuestionResponse.NO)),
-    //         new AutoQuestion("Post-Launch?", List.of(AutoQuestionResponse.NOTHING))),
-    //     autoBuilder.homeDepotSalesman());
+    // Home Depot Salesman
+    autoSelector.addRoutine(
+        "Home Depot Salesman",
+        List.of(
+            new AutoQuestion("Through Tower?", List.of(AutoQuestionResponse.NO)),
+            new AutoQuestion("Post-Launch?", List.of(AutoQuestionResponse.NOTHING))),
+        autoBuilder.homeDepotSalesman());
 
-    // // Lowe's Hardware Salesman
-    // autoSelector.addRoutine(
-    //     "Lowe's Hardware Salesman",
-    //     List.of(
-    //         new AutoQuestion("Through Tower?", List.of(AutoQuestionResponse.NO)),
-    //         new AutoQuestion("Post-Launch?", List.of(AutoQuestionResponse.NOTHING))),
-    //     autoBuilder.lowesHardwareSalesman());
+    // Lowe's Hardware Salesman
+    autoSelector.addRoutine(
+        "Lowe's Hardware Salesman",
+        List.of(
+            new AutoQuestion("Through Tower?", List.of(AutoQuestionResponse.NO)),
+            new AutoQuestion("Post-Launch?", List.of(AutoQuestionResponse.NOTHING))),
+        autoBuilder.lowesHardwareSalesman());
 
     // Monopoly Salesman
     autoSelector.addRoutine(
@@ -336,7 +336,11 @@ public class RobotContainer {
 
     // ***** PRIMARY CONTROLLER *****
 
-    Trigger hubActive = new Trigger(() -> HubShiftUtil.getShiftedShiftInfo().active());
+    Trigger hubActiveOrPassing =
+        new Trigger(
+            () ->
+                HubShiftUtil.getShiftedShiftInfo().active()
+                    || LaunchCalculator.getInstance().getParameters().passing());
     Trigger inLaunchingTolerance =
         new Trigger(() -> hood.atGoal() && flywheel.atGoal() && DriveCommands.atLaunchGoal());
 
@@ -346,7 +350,7 @@ public class RobotContainer {
         .whileTrue(DriveCommands.joystickDriveWhileLaunching(drive, driverX, driverY))
         .whileTrue(flywheel.runTrackTargetCommand())
         .and(() -> LaunchCalculator.getInstance().getParameters().isValid())
-        .and(() -> ignoreHubState.getAsBoolean() || hubActive.getAsBoolean())
+        .and(() -> ignoreHubState.getAsBoolean() || hubActiveOrPassing.getAsBoolean())
         .and(inLaunchingTolerance.debounce(0.25, DebounceType.kFalling))
         .whileTrue(
             Commands.parallel(
@@ -380,6 +384,7 @@ public class RobotContainer {
     primary
         .rightBumper()
         .or(secondary.rightBumper())
+        .and(() -> ignoreHubState.getAsBoolean() || hubActiveOrPassing.getAsBoolean())
         .whileTrue(
             Commands.parallel(
                     Commands.startEnd(

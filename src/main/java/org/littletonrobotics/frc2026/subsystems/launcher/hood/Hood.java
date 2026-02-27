@@ -79,7 +79,7 @@ public class Hood extends FullSubsystem {
         Robot.showHardwareAlerts() && !motorConnectedDebouncer.calculate(inputs.motorConnected));
 
     // Stop when disabled
-    if (DriverStation.isDisabled() || !hoodZeroed) {
+    if (DriverStation.isDisabled() || (!hoodZeroed && outputs.mode != HoodIOOutputMode.OPEN_LOOP)) {
       outputs.mode = HoodIOOutputMode.BRAKE;
 
       if (coastOverride.getAsBoolean()) {
@@ -141,6 +141,7 @@ public class Hood extends FullSubsystem {
     return run(() -> {
           outputs.appliedVolts = homingVolts.get();
           outputs.mode = HoodIOOutputMode.OPEN_LOOP;
+          hoodZeroed = false;
         })
         .raceWith(
             Commands.waitSeconds(0.5)

@@ -40,9 +40,9 @@ public class LaunchCalculator {
   @Getter private double hoodAngleOffsetDeg = 0.0;
 
   private final LinearFilter hoodAngleFilter =
-      LinearFilter.movingAverage((int) (0.4 / Constants.loopPeriodSecs));
+      LinearFilter.movingAverage((int) (0.1 / Constants.loopPeriodSecs));
   private final LinearFilter driveAngleFilter =
-      LinearFilter.movingAverage((int) (1.5 / Constants.loopPeriodSecs));
+      LinearFilter.movingAverage((int) (0.1 / Constants.loopPeriodSecs));
 
   private double lastHoodAngle;
   private Rotation2d lastDriveAngle;
